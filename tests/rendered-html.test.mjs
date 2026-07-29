@@ -42,12 +42,18 @@ test("keeps the long-distance displays label-free and protected", async () => {
 
   assert.doesNotMatch(score, />RUNS</i);
   assert.doesNotMatch(score, />WICKETS</i);
+  assert.doesNotMatch(score, /className="slash"/);
+  assert.match(score, /score-diagonal pixel-shift/);
+  assert.match(score, /score-runs/);
+  assert.match(score, /score-wickets/);
   assert.doesNotMatch(overs, />OVERS</i);
   assert.match(css, /\.pixel-shift/);
   assert.match(css, /height:\s*100vh/);
   assert.match(css, /font-variant-numeric:\s*tabular-nums/);
   assert.match(css, /"Chakra Petch"/);
   assert.match(css, /font-kerning:\s*normal/);
+  assert.match(css, /\.score-runs[\s\S]*left:\s*3vw/);
+  assert.match(css, /\.score-wickets[\s\S]*right:\s*3vw/);
 });
 
 test("declares durable scoreboard state, innings and undo storage", async () => {

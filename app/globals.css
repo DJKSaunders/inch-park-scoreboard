@@ -81,22 +81,50 @@ a {
   will-change: transform;
 }
 
-.score-value {
-  font-size: min(98vh, 35vw);
-  gap: 0.01em;
-}
-
-.score-value.compact {
-  font-size: min(90vh, 31vw);
-}
-
-.score-value .slash {
-  color: #f2f4ff;
-  font-size: 0.76em;
+.score-diagonal {
+  font-family: "Chakra Petch", sans-serif;
+  font-feature-settings:
+    "kern" 1,
+    "tnum" 1,
+    "lnum" 1;
+  font-kerning: normal;
+  font-variant-numeric: tabular-nums lining-nums;
   font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 0;
-  opacity: 0.94;
+  height: 100vh;
+  letter-spacing: -0.015em;
+  line-height: 0.82;
+  position: relative;
+  text-rendering: optimizeLegibility;
+  transform-origin: center;
+  white-space: nowrap;
+  width: 100vw;
+  will-change: transform;
+}
+
+.score-runs,
+.score-wickets {
+  display: block;
+  position: absolute;
+}
+
+.score-runs {
+  font-size: min(88vh, 42vw);
+  left: 3vw;
+  top: 2.5vh;
+}
+
+.score-runs.compact {
+  font-size: min(76vh, 34vw);
+}
+
+.score-wickets {
+  bottom: 1.5vh;
+  font-size: min(80vh, 38vw);
+  right: 3vw;
+}
+
+.score-wickets.two-digit {
+  font-size: min(68vh, 30vw);
 }
 
 .overs-value {

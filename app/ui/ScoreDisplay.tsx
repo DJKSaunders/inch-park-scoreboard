@@ -11,17 +11,22 @@ export function ScoreDisplay() {
     );
   }
 
-  const compact = state.wickets >= 10 || state.runs >= 1000;
+  const compactRuns = state.runs >= 1000;
 
   return (
     <main
       className="display-page"
       aria-label={`${state.runs} runs for ${state.wickets} wickets`}
     >
-      <div className={`display-value score-value pixel-shift${compact ? " compact" : ""}`}>
-        <span>{state.runs}</span>
-        <span className="slash">/</span>
-        <span>{state.wickets}</span>
+      <div className="score-diagonal pixel-shift">
+        <span className={`score-runs${compactRuns ? " compact" : ""}`}>
+          {state.runs}
+        </span>
+        <span
+          className={`score-wickets${state.wickets >= 10 ? " two-digit" : ""}`}
+        >
+          {state.wickets}
+        </span>
       </div>
     </main>
   );
