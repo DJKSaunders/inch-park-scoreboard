@@ -45,5 +45,7 @@ transition, and a complete manual override.
 The `pi/` directory contains the Raspberry Pi 4 kiosk installer, local scoring
 service, dual-HDMI launcher, status diagnostics, and installation
 instructions. At startup, the main display shows the club-branded loading
-screen until the local scoring service is ready, then opens the live score.
-The GitHub repository remains the source and update host.
+screen until the local scoring service is ready, then opens the live score. The
+same graphic is installed as the underlying desktop wallpaper and the desktop
+panel is suppressed, avoiding an unbranded desktop flash between Linux startup
+and Chromium. The GitHub repository remains the source and update host.

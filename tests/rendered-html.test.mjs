@@ -45,6 +45,9 @@ test("starts the Pi kiosk with a service-aware branded screen", async () => {
   ]);
 
   assert.match(installer, /START_PATH=.*loading/);
+  assert.match(installer, /scoreboard-wallpaper\.png/);
+  assert.match(installer, /show_trash=0/);
+  assert.match(installer, /Disabled by Inch Park Scoreboard kiosk/);
   assert.match(launcher, /curl --fail --silent --max-time 2/);
   assert.match(launcher, /--app="\$START_URL"/);
   assert.match(loading, /Welcome to Inch Park/);

@@ -67,8 +67,10 @@ PROJECT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 INSTALL_DIR="$HOME/.local/share/inch-park-scoreboard"
 CONFIG_DIR="$HOME/.config/inch-park-scoreboard"
 LABWC_DIR="$HOME/.config/labwc"
+PCMANFM_DIR="$HOME/.config/pcmanfm/default"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
 BACKUP_DIR="$CONFIG_DIR/backups/$(date +%Y%m%d-%H%M%S)"
+SYSTEM_LABWC_AUTOSTART="/etc/xdg/labwc/autostart"
 
 if [[ -z $SCORER_PASSWORD && -r "$CONFIG_DIR/server.env" ]]; then
   SCORER_PASSWORD="$(sed -n 's/^SCORER_PASSWORD=//p' "$CONFIG_DIR/server.env")"
@@ -82,7 +84,13 @@ if [[ -z $SCORER_PASSWORD || $SCORER_PASSWORD == *$'\n'* ]]; then
   exit 1
 fi
 
-mkdir -p "$INSTALL_DIR" "$CONFIG_DIR" "$LABWC_DIR" "$SYSTEMD_DIR" "$BACKUP_DIR"
+mkdir -p \
+  "$INSTALL_DIR/assets" \
+  "$CONFIG_DIR" \
+  "$LABWC_DIR" \
+  "$PCMANFM_DIR" \
+  "$SYSTEMD_DIR" \
+  "$BACKUP_DIR"
 
 for existing_file in "$LABWC_DIR/autostart" "$LABWC_DIR/rc.xml"; do
   if [[ -f $existing_file ]]; then
@@ -93,8 +101,39 @@ done
 install -m 0755 "$SCRIPT_DIR/start-scoreboard.sh" "$INSTALL_DIR/start-scoreboard.sh"
 install -m 0755 "$SCRIPT_DIR/status.sh" "$INSTALL_DIR/status.sh"
 install -m 0755 "$SCRIPT_DIR/server.py" "$INSTALL_DIR/server.py"
+install -m 0644 \
+  "$SCRIPT_DIR/assets/scoreboard-wallpaper.png" \
+  "$INSTALL_DIR/assets/scoreboard-wallpaper.png"
 mkdir -p "$INSTALL_DIR/web"
 cp -R "$PROJECT_DIR/github-pages/." "$INSTALL_DIR/web/"
+
+for output in 0 1; do
+  cat >"$PCMANFM_DIR/desktop-items-$output.conf" <<EOF
+[*]
+wallpaper_mode=crop
+wallpaper_common=1
+wallpaper=$INSTALL_DIR/assets/scoreboard-wallpaper.png
+desktop_bg=#171d63
+desktop_fg=#ffffff
+desktop_shadow=#171d63
+desktop_font=Nunito Sans Light 12
+show_wm_menu=0
+sort=mtime;ascending;
+show_documents=0
+show_trash=0
+show_mounts=0
+EOF
+done
+
+# The Raspberry Pi panel would otherwise flash above the wallpaper before the
+# kiosk opens. Preserve the desktop process for the branded background, but
+# prevent the panel from being started by the system Labwc session.
+if grep -Fxq '/usr/bin/lwrespawn /usr/bin/wf-panel-pi &' "$SYSTEM_LABWC_AUTOSTART"; then
+  cp -p "$SYSTEM_LABWC_AUTOSTART" "$BACKUP_DIR/system-labwc-autostart"
+  sudo sed -i \
+    's|^/usr/bin/lwrespawn /usr/bin/wf-panel-pi &$|# Disabled by Inch Park Scoreboard kiosk|' \
+    "$SYSTEM_LABWC_AUTOSTART"
+fi
 
 {
   printf 'BASE_URL=%q\n' "$BASE_URL"

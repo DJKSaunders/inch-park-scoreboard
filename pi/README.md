@@ -31,6 +31,8 @@ The installer:
 
 - enables desktop automatic login;
 - disables Raspberry Pi OS screen blanking;
+- installs the Inch Park graphic as the desktop wallpaper;
+- suppresses the Raspberry Pi desktop panel during kiosk startup;
 - installs a persistent local web and scoring service on port `8080`;
 - shows a club-branded loading screen until that service is ready;
 - installs a Labwc autostart entry;
