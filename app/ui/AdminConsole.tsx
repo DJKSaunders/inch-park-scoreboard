@@ -34,27 +34,18 @@ export function AdminConsole() {
     }
   }
 
-  function addBall() {
-    const nextBall = state.balls + 1;
-    void send(
-      {
-        action: "update",
-        completedOvers:
-          nextBall === 6 ? state.completedOvers + 1 : state.completedOvers,
-        balls: nextBall === 6 ? 0 : nextBall,
-      },
-      "Legal ball added.",
-    );
-  }
-
   return (
     <div className="admin-shell">
       <header className="admin-topbar">
         <div className="brand">
-          <div className="brand-mark">IP</div>
+          <img
+            className="brand-logo"
+            src="/club-logo.png"
+            alt="Edinburgh South Cricket Club"
+          />
           <div className="brand-copy">
-            <strong>Cricket scoreboard</strong>
-            <span>Display control</span>
+            <strong>Edinburgh South CC</strong>
+            <span>Scoreboard control</span>
           </div>
         </div>
         <div className="connection-pill">
@@ -71,6 +62,9 @@ export function AdminConsole() {
             <p>Both landscape screens follow the same selection.</p>
           </div>
           <nav className="display-links" aria-label="Display previews">
+            <a className="scoring-link" href="/scoring">
+              Open fallback scorer
+            </a>
             <a className="outline-link" href="/score" target="_blank">
               Open score screen
             </a>
@@ -166,48 +160,15 @@ export function AdminConsole() {
             </div>
 
             <div className="simulator">
-              <h3>Webhook simulator</h3>
+              <h3>Fallback control</h3>
               <p>
-                Test both screens before PlayHQ credentials are connected.
+                Use the mobile scorer if the PlayHQ feed is unavailable.
               </p>
-              <div className="control-row">
-                <button
-                  className="control-button"
-                  disabled={!state.matchId || busy}
-                  onClick={() =>
-                    void send(
-                      { action: "update", runs: state.runs + 1 },
-                      "Run added.",
-                    )
-                  }
-                  type="button"
-                >
-                  + Run
-                </button>
-                <button
-                  className="control-button"
-                  disabled={!state.matchId || busy || state.wickets >= 10}
-                  onClick={() =>
-                    void send(
-                      { action: "update", wickets: state.wickets + 1 },
-                      "Wicket added.",
-                    )
-                  }
-                  type="button"
-                >
-                  + Wicket
-                </button>
-                <button
-                  className="control-button"
-                  disabled={!state.matchId || busy}
-                  onClick={addBall}
-                  type="button"
-                >
-                  + Ball
-                </button>
-              </div>
+              <a className="fallback-button" href="/scoring">
+                Open mobile scoring
+              </a>
               <button
-                className="control-button"
+                className="clear-button"
                 disabled={!state.matchId || busy}
                 onClick={() =>
                   void send({ action: "clear" }, "Both screens cleared.")

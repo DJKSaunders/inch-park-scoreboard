@@ -8,15 +8,21 @@ async function source(path) {
   return readFile(new URL(path, root), "utf8");
 }
 
-test("defines the admin and paired display routes", async () => {
-  const [admin, score, overs] = await Promise.all([
+test("defines the admin, scoring and paired display routes", async () => {
+  const [admin, scoring, score, overs] = await Promise.all([
     source("app/ui/AdminConsole.tsx"),
+    source("app/ui/ScoringConsole.tsx"),
     source("app/score/page.tsx"),
     source("app/overs/page.tsx"),
   ]);
 
   assert.match(admin, /Choose the featured match/);
   assert.match(admin, /Display this match/);
+  assert.match(admin, /Open fallback scorer/);
+  assert.match(scoring, /runActions/);
+  assert.match(scoring, /Wide \+1/);
+  assert.match(scoring, /No ball \+1/);
+  assert.match(scoring, /Undo last action/);
   assert.match(score, /ScoreDisplay/);
   assert.match(overs, /OversDisplay/);
 });
@@ -34,14 +40,22 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(css, /\.pixel-shift/);
   assert.match(css, /height:\s*100vh/);
   assert.match(css, /font-variant-numeric:\s*tabular-nums/);
+  assert.match(css, /"Chakra Petch"/);
+  assert.match(css, /font-kerning:\s*normal/);
 });
 
-test("declares durable scoreboard state", async () => {
-  const [hosting, migration] = await Promise.all([
+test("declares durable scoreboard state and undo storage", async () => {
+  const [hosting, firstMigration, secondMigration, database] = await Promise.all([
     source(".openai/hosting.json"),
     source("drizzle/0000_lying_steel_serpent.sql"),
+    source("drizzle/0001_sparkling_ultragirl.sql"),
+    source("app/lib/scoreboard-db.ts"),
   ]);
 
   assert.match(hosting, /"d1": "DB"/);
-  assert.match(migration, /CREATE TABLE `scoreboard_state`/);
+  assert.match(firstMigration, /CREATE TABLE `scoreboard_state`/);
+  assert.match(secondMigration, /CREATE TABLE `scoreboard_undo`/);
+  assert.match(database, /scoreDelivery/);
+  assert.match(database, /legalBall/);
+  assert.match(database, /undoLastScore/);
 });

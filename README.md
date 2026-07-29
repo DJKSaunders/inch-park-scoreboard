@@ -8,6 +8,7 @@ and paired 1920×1080 landscape LCD displays.
 - `/` — admin match selection and local simulation controls
 - `/score` — label-free runs/wickets display
 - `/overs` — label-free overs display
+- `/scoring` — portrait mobile fallback scorer with extras and undo
 - `/api/state` — persistent scoreboard state API
 
 The prototype uses mock PlayHQ fixtures until production API credentials,
@@ -26,3 +27,5 @@ pnpm run test
 Scoreboard state is stored in Cloudflare D1. The display pages poll the local
 state endpoint, so a temporary PlayHQ outage does not blank the screens.
 
+The fallback scorer advances the ball for normal runs, wickets, byes and
+leg-byes. Wides, no-balls and penalty runs do not advance the over.

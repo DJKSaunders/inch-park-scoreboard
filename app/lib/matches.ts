@@ -16,7 +16,7 @@ export type Match = {
 export const matches: Match[] = [
   {
     id: "inch-park-v-grange",
-    homeTeam: "Inch Park",
+    homeTeam: "Edinburgh South",
     awayTeam: "Grange",
     venue: "Inch Park · Main Square",
     startTime: "Today · 13:00",
@@ -28,7 +28,7 @@ export const matches: Match[] = [
   },
   {
     id: "inch-park-2-v-carlton-3",
-    homeTeam: "Inch Park 2",
+    homeTeam: "Edinburgh South 2",
     awayTeam: "Carlton 3",
     venue: "Inch Park · East Square",
     startTime: "Today · 13:30",
@@ -40,7 +40,7 @@ export const matches: Match[] = [
   },
   {
     id: "inch-park-women-v-st-boswells",
-    homeTeam: "Inch Park Women",
+    homeTeam: "Edinburgh South Women",
     awayTeam: "St Boswells",
     venue: "Inch Park · Main Square",
     startTime: "Tomorrow · 11:00",

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import {
   clearScoreboard,
   getScoreboardState,
+  scoreDelivery,
   selectMatch,
+  undoLastScore,
   updateScore,
 } from "../../lib/scoreboard-db";
 
@@ -17,12 +19,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      action?: "select" | "update" | "clear";
+      action?: "select" | "update" | "score" | "undo" | "clear";
       matchId?: string;
       runs?: number;
       wickets?: number;
       completedOvers?: number;
       balls?: number;
+      runsAdded?: number;
+      wicketAdded?: boolean;
+      legalBall?: boolean;
     };
 
     if (body.action === "select" && body.matchId) {
@@ -38,6 +43,24 @@ export async function POST(request: Request) {
           balls: body.balls,
         }),
       );
+    }
+
+    if (
+      body.action === "score" &&
+      typeof body.runsAdded === "number" &&
+      typeof body.legalBall === "boolean"
+    ) {
+      return NextResponse.json(
+        await scoreDelivery({
+          runsAdded: body.runsAdded,
+          wicketAdded: body.wicketAdded ?? false,
+          legalBall: body.legalBall,
+        }),
+      );
+    }
+
+    if (body.action === "undo") {
+      return NextResponse.json(await undoLastScore());
     }
 
     if (body.action === "clear") {

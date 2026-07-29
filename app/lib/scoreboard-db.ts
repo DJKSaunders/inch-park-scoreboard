@@ -18,6 +18,17 @@ const createStateTable = `
   )
 `;
 
+const createUndoTable = `
+  CREATE TABLE IF NOT EXISTS scoreboard_undo (
+    id INTEGER PRIMARY KEY,
+    runs INTEGER NOT NULL DEFAULT 0,
+    wickets INTEGER NOT NULL DEFAULT 0,
+    completed_overs INTEGER NOT NULL DEFAULT 0,
+    balls INTEGER NOT NULL DEFAULT 0,
+    available INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
 type StateRow = {
   match_id: string | null;
   home_team: string | null;
@@ -32,6 +43,14 @@ type StateRow = {
   updated_at: string;
 };
 
+type UndoRow = {
+  runs: number;
+  wickets: number;
+  completed_overs: number;
+  balls: number;
+  available: number;
+};
+
 function getD1() {
   const db = env.DB;
   if (!db) {
@@ -43,6 +62,7 @@ function getD1() {
 async function initialise() {
   const db = getD1();
   await db.prepare(createStateTable).run();
+  await db.prepare(createUndoTable).run();
   await db
     .prepare(
       `INSERT INTO scoreboard_state (
@@ -51,6 +71,14 @@ async function initialise() {
       ON CONFLICT(id) DO NOTHING`,
     )
     .bind(new Date().toISOString())
+    .run();
+  await db
+    .prepare(
+      `INSERT INTO scoreboard_undo (
+        id, runs, wickets, completed_overs, balls, available
+      ) VALUES (1, 0, 0, 0, 0, 0)
+      ON CONFLICT(id) DO NOTHING`,
+    )
     .run();
 }
 
@@ -144,6 +172,81 @@ export async function updateScore(
   return getScoreboardState();
 }
 
+export async function scoreDelivery(input: {
+  runsAdded: number;
+  wicketAdded: boolean;
+  legalBall: boolean;
+}) {
+  const current = await getScoreboardState();
+  if (!current.matchId) throw new Error("Select a match first.");
+  if (!Number.isInteger(input.runsAdded) || input.runsAdded < 0 || input.runsAdded > 6) {
+    throw new Error("Invalid run value.");
+  }
+
+  const nextBall = input.legalBall ? current.balls + 1 : current.balls;
+  const completedOvers =
+    nextBall === 6 ? current.completedOvers + 1 : current.completedOvers;
+  const balls = nextBall === 6 ? 0 : nextBall;
+  const runs = Math.min(9999, current.runs + input.runsAdded);
+  const wickets = Math.min(
+    10,
+    current.wickets + (input.wicketAdded ? 1 : 0),
+  );
+
+  await getD1().batch([
+    getD1()
+      .prepare(
+        `UPDATE scoreboard_undo SET
+          runs = ?, wickets = ?, completed_overs = ?, balls = ?, available = 1
+        WHERE id = 1`,
+      )
+      .bind(
+        current.runs,
+        current.wickets,
+        current.completedOvers,
+        current.balls,
+      ),
+    getD1()
+      .prepare(
+        `UPDATE scoreboard_state SET
+          runs = ?, wickets = ?, completed_overs = ?, balls = ?, updated_at = ?
+        WHERE id = 1`,
+      )
+      .bind(runs, wickets, completedOvers, balls, new Date().toISOString()),
+  ]);
+
+  return getScoreboardState();
+}
+
+export async function undoLastScore() {
+  const current = await getScoreboardState();
+  if (!current.matchId) throw new Error("Select a match first.");
+  const undo = await getD1()
+    .prepare("SELECT * FROM scoreboard_undo WHERE id = 1")
+    .first<UndoRow>();
+  if (!undo?.available) throw new Error("There is no scoring action to undo.");
+
+  await getD1().batch([
+    getD1()
+      .prepare(
+        `UPDATE scoreboard_state SET
+          runs = ?, wickets = ?, completed_overs = ?, balls = ?, updated_at = ?
+        WHERE id = 1`,
+      )
+      .bind(
+        undo.runs,
+        undo.wickets,
+        undo.completed_overs,
+        undo.balls,
+        new Date().toISOString(),
+      ),
+    getD1()
+      .prepare("UPDATE scoreboard_undo SET available = 0 WHERE id = 1"),
+  ]);
+
+  return getScoreboardState();
+}
+
 export async function clearScoreboard() {
   await initialise();
   await getD1()
@@ -155,6 +258,9 @@ export async function clearScoreboard() {
       WHERE id = 1`,
     )
     .bind(new Date().toISOString())
+    .run();
+  await getD1()
+    .prepare("UPDATE scoreboard_undo SET available = 0 WHERE id = 1")
     .run();
   return getScoreboardState();
 }

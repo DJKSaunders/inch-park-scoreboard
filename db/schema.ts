@@ -14,3 +14,12 @@ export const scoreboardState = sqliteTable("scoreboard_state", {
   balls: integer("balls").notNull().default(0),
   updatedAt: text("updated_at").notNull(),
 });
+
+export const scoreboardUndo = sqliteTable("scoreboard_undo", {
+  id: integer("id").primaryKey(),
+  runs: integer("runs").notNull().default(0),
+  wickets: integer("wickets").notNull().default(0),
+  completedOvers: integer("completed_overs").notNull().default(0),
+  balls: integer("balls").notNull().default(0),
+  available: integer("available", { mode: "boolean" }).notNull().default(false),
+});
