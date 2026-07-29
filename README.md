@@ -1,0 +1,28 @@
+# Inch Park Cricket Scoreboard
+
+A two-screen, long-distance cricket scoreboard designed for a Raspberry Pi 4
+and paired 1920×1080 landscape LCD displays.
+
+## Screens
+
+- `/` — admin match selection and local simulation controls
+- `/score` — label-free runs/wickets display
+- `/overs` — label-free overs display
+- `/api/state` — persistent scoreboard state API
+
+The prototype uses mock PlayHQ fixtures until production API credentials,
+subscription configuration, and webhook delivery details are supplied.
+
+## Development
+
+Requires Node.js `>=22.13.0` and pnpm.
+
+```bash
+pnpm install
+pnpm run dev
+pnpm run test
+```
+
+Scoreboard state is stored in Cloudflare D1. The display pages poll the local
+state endpoint, so a temporary PlayHQ outage does not blank the screens.
+
