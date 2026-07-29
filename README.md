@@ -3,20 +3,20 @@
 A two-screen, long-distance cricket scoreboard designed for a Raspberry Pi 4
 and paired 1920×1080 landscape LCD displays.
 
-## Live screens
+## Scoreboard screens
 
-- [Runs and wickets](https://djksaunders.github.io/inch-park-scoreboard/score/)
-- [Overs](https://djksaunders.github.io/inch-park-scoreboard/overs/)
-- [Mobile scorer](https://djksaunders.github.io/inch-park-scoreboard/scoring/)
+- Runs and wickets: `/score/`
+- Overs: `/overs/`
+- Mobile scorer: `/scoring/`
 
-The static display and scoring pages are deployed from `github-pages/` by
-GitHub Actions. Persistent scoreboard state is supplied by the hosted
-`/api/state` service backed by Cloudflare D1.
+The Raspberry Pi serves the static display and scoring pages from
+`github-pages/` and persists scoreboard state locally. This keeps the
+scoreboard operational if the ground's internet connection fails.
 
-Anyone can view the display pages. Score-changing API requests require the
-shared `SCORER_PASSWORD`, which is stored as a secret runtime environment
-variable and is never committed to this repository. The mobile scorer keeps
-the supplied password only in the browser tab's session storage.
+Anyone on the local network can view the display pages. Score-changing API
+requests require the shared `SCORER_PASSWORD`, which is stored only on the Pi
+and is never committed to this repository. The mobile scorer keeps the
+supplied password only in the browser tab's session storage.
 
 ## Development
 
@@ -41,7 +41,6 @@ transition, and a complete manual override.
 
 ## Raspberry Pi kiosk
 
-The `pi/` directory contains the Raspberry Pi 4 kiosk installer, dual-HDMI
-launcher, status diagnostics, and installation instructions. The Pi remains a
-display client and opens the GitHub Pages display URLs in Chromium kiosk mode.
-The application state continues to run on the hosted service.
+The `pi/` directory contains the Raspberry Pi 4 kiosk installer, local scoring
+service, dual-HDMI launcher, status diagnostics, and installation
+instructions. The GitHub repository remains the source and update host.

@@ -18,7 +18,7 @@ Connect to the Pi over SSH, clone this repository, and run:
 
 ```bash
 cd ~/inch-park-scoreboard
-./pi/install.sh
+./pi/install.sh --password 'choose-a-shared-password'
 ```
 
 To use a different production hostname:
@@ -31,6 +31,7 @@ The installer:
 
 - enables desktop automatic login;
 - disables Raspberry Pi OS screen blanking;
+- installs a persistent local web and scoring service on port `8080`;
 - installs a Labwc autostart entry;
 - uses Labwc rules to bind each Chromium window to a specific HDMI output;
 - restarts Chromium if it exits; and
@@ -50,14 +51,13 @@ After rebooting:
 The command reports memory, power warnings, connected display outputs,
 Chromium processes, and recent kiosk launcher messages.
 
-## Current hosting
+## Local addresses
 
-The Pi is a display client only. It does not run the web application or
-database locally. The default display URLs are:
+The Pi serves the application and persists its score locally:
 
-- `https://inch-park-scoreboard.djksaunders.chatgpt.site/score`
-- `https://inch-park-scoreboard.djksaunders.chatgpt.site/overs`
+- Main display: `http://127.0.0.1:8080/score/`
+- Overs display: `http://127.0.0.1:8080/overs/`
+- Mobile scorer: `http://inch-park-scoreboard.local:8080/scoring/`
 
-The production host currently requires authentication. Authenticate the
-persistent Chromium profiles before enabling Raspberry Pi OS's read-only
-overlay filesystem.
+The mobile scorer is intended for devices on the same trusted club network.
+The shared password is stored only on the Pi with owner-only file permissions.
