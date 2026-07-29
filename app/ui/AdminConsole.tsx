@@ -68,7 +68,7 @@ export function AdminConsole() {
               rel="noopener noreferrer"
               target="_blank"
             >
-              Open fallback scorer
+              Open scoreboard control
             </a>
             <a className="outline-link" href="/score" target="_blank">
               Open score screen
@@ -167,7 +167,7 @@ export function AdminConsole() {
             <div className="simulator">
               <h3>Fallback control</h3>
               <p>
-                Use the mobile scorer if the PlayHQ feed is unavailable.
+                Use Scoreboard control if the PlayHQ feed is unavailable.
               </p>
               <a
                 className="fallback-button"

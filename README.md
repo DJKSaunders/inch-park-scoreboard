@@ -7,7 +7,7 @@ and paired 1920×1080 landscape LCD displays.
 
 - Runs and wickets: `/score/`
 - Overs: `/overs/`
-- Mobile scorer: `/scoring/`
+- Scoreboard control: `/scoring/`
 
 The Raspberry Pi serves the static display and scoring pages from
 `github-pages/` and persists scoreboard state locally. This keeps the
@@ -15,7 +15,7 @@ scoreboard operational if the ground's internet connection fails.
 
 Anyone on the local network can view the display pages. Score-changing API
 requests require the shared `SCORER_PASSWORD`, which is stored only on the Pi
-and is never committed to this repository. The mobile scorer keeps the
+and is never committed to this repository. Scoreboard control keeps the
 supplied password only in the browser tab's session storage.
 
 ## Development
@@ -31,7 +31,7 @@ pnpm run test
 Scoreboard state is stored in Cloudflare D1. The display pages poll the local
 state endpoint, so a temporary PlayHQ outage does not blank the screens.
 
-The mobile scorer advances the ball for normal runs, wickets, byes and
+Scoreboard control advances the ball for normal runs, wickets, byes and
 leg-byes. Wides, no-balls and penalty runs do not advance the over.
 
 Keyboard shortcuts mirror the scoring buttons: `0`, `1`, `2`, `3`, `4`, `6`

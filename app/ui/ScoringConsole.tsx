@@ -182,7 +182,7 @@ export function ScoringConsole() {
         <a className="scorer-brand" href="/" aria-label="Back to match control">
           <img src="/club-logo.png" alt="" />
           <span>
-            <strong>Fallback scorer</strong>
+            <strong>Scoreboard control</strong>
             <small>Edinburgh South CC</small>
           </span>
         </a>

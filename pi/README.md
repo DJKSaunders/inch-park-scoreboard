@@ -57,7 +57,7 @@ The Pi serves the application and persists its score locally:
 
 - Main display: `http://127.0.0.1:8080/score/`
 - Overs display: `http://127.0.0.1:8080/overs/`
-- Mobile scorer: `http://inch-park-scoreboard.local:8080/scoring/`
+- Scoreboard control: `http://inch-park-scoreboard.local:8080/scoring/`
 
-The mobile scorer is intended for devices on the same trusted club network.
+Scoreboard control is intended for devices on the same trusted club network.
 The shared password is stored only on the Pi with owner-only file permissions.

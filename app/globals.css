@@ -60,6 +60,11 @@ a {
   width: 100vw;
 }
 
+.display-page,
+.display-page * {
+  cursor: none;
+}
+
 .display-value {
   align-items: center;
   display: flex;
@@ -109,8 +114,8 @@ a {
 
 .score-runs {
   font-size: min(88vh, 42vw);
-  left: 3vw;
-  top: 2.5vh;
+  left: 0.7vw;
+  top: 0.5vh;
 }
 
 .score-runs.compact {
@@ -118,13 +123,13 @@ a {
 }
 
 .score-wickets {
-  bottom: 1.5vh;
-  font-size: min(80vh, 38vw);
-  right: 3vw;
+  bottom: 0.5vh;
+  font-size: min(72vh, 34vw);
+  right: 0.7vw;
 }
 
 .score-wickets.two-digit {
-  font-size: min(68vh, 30vw);
+  font-size: min(62vh, 28vw);
 }
 
 .overs-value {

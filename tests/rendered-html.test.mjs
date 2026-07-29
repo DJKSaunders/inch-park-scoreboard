@@ -18,7 +18,7 @@ test("defines the admin, scoring and paired display routes", async () => {
 
   assert.match(admin, /Choose the featured match/);
   assert.match(admin, /Display this match/);
-  assert.match(admin, /Open fallback scorer/);
+  assert.match(admin, /Open scoreboard control/);
   assert.match(admin, /href="\/scoring"[\s\S]*?target="_blank"/);
   assert.match(scoring, /runActions/);
   assert.match(scoring, /Wide \+1/);
@@ -52,8 +52,10 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(css, /font-variant-numeric:\s*tabular-nums/);
   assert.match(css, /"Chakra Petch"/);
   assert.match(css, /font-kerning:\s*normal/);
-  assert.match(css, /\.score-runs[\s\S]*left:\s*3vw/);
-  assert.match(css, /\.score-wickets[\s\S]*right:\s*3vw/);
+  assert.match(css, /\.display-page \*[\s\S]*cursor:\s*none/);
+  assert.match(css, /\.score-runs[\s\S]*left:\s*0\.7vw/);
+  assert.match(css, /\.score-wickets[\s\S]*font-size:\s*min\(72vh,\s*34vw\)/);
+  assert.match(css, /\.score-wickets[\s\S]*right:\s*0\.7vw/);
 });
 
 test("declares durable scoreboard state, innings and undo storage", async () => {

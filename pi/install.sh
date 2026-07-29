@@ -163,7 +163,7 @@ systemctl --user enable --now inch-park-scoreboard.service
 echo
 echo "Inch Park Scoreboard kiosk configuration installed."
 echo "Base URL: $BASE_URL"
-echo "Mobile scorer: http://$(hostname).local:8080/scoring/"
+echo "Scoreboard control: http://$(hostname).local:8080/scoring/"
 echo "Existing Labwc files, when present, were backed up to:"
 echo "  $BACKUP_DIR"
 echo

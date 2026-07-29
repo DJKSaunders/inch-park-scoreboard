@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ScoringConsole } from "../ui/ScoringConsole";
 
 export const metadata: Metadata = {
-  title: "Fallback scorer",
+  title: "Scoreboard control",
   description: "Mobile cricket scoring controls for the paired displays.",
 };
 
