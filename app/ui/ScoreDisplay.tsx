@@ -18,7 +18,9 @@ export function ScoreDisplay() {
       className="display-page"
       aria-label={`${state.runs} runs for ${state.wickets} wickets`}
     >
-      <div className="score-diagonal pixel-shift">
+      <div
+        className={`score-diagonal pixel-shift${state.runs >= 200 ? " crowded" : ""}`}
+      >
         <span className={`score-runs${compactRuns ? " compact" : ""}`}>
           {state.runs}
         </span>

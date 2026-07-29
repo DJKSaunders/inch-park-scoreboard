@@ -47,6 +47,7 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(score, /score-runs/);
   assert.match(score, /score-wickets/);
   assert.match(score, /<small>FOR<\/small>/);
+  assert.match(score, /state\.runs >= 200/);
   assert.doesNotMatch(overs, />OVERS</i);
   assert.match(css, /\.pixel-shift/);
   assert.match(css, /height:\s*100vh/);
@@ -56,6 +57,8 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(css, /\.display-page \*[\s\S]*cursor:\s*none/);
   assert.match(css, /\.score-runs[\s\S]*font-size:\s*min\(94vh,\s*49vw\)/);
   assert.match(css, /\.score-runs[\s\S]*left:\s*0\.7vw/);
+  assert.match(css, /\.score-diagonal\.crowded \.score-runs/);
+  assert.match(css, /\.score-diagonal\.crowded \.score-wickets/);
   assert.match(css, /\.score-wickets[\s\S]*font-size:\s*min\(72vh,\s*34vw\)/);
   assert.match(css, /\.score-wickets[\s\S]*color:\s*var\(--green-bright\)/);
   assert.match(css, /\.score-wickets[\s\S]*right:\s*0\.7vw/);

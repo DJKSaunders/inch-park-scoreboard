@@ -25,6 +25,7 @@
     if (view === "score") {
       $("#runs").classList.toggle("compact", state.runs >= 1000);
       $("#wicket-block").classList.toggle("two-digit", state.wickets >= 10);
+      $("#score").classList.toggle("crowded", state.runs >= 200);
     }
     try { localStorage.setItem("inch-park-score", JSON.stringify(state)); } catch {}
   }
