@@ -62,7 +62,12 @@ export function AdminConsole() {
             <p>Both landscape screens follow the same selection.</p>
           </div>
           <nav className="display-links" aria-label="Display previews">
-            <a className="scoring-link" href="/scoring">
+            <a
+              className="scoring-link"
+              href="/scoring"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
               Open fallback scorer
             </a>
             <a className="outline-link" href="/score" target="_blank">
@@ -164,7 +169,12 @@ export function AdminConsole() {
               <p>
                 Use the mobile scorer if the PlayHQ feed is unavailable.
               </p>
-              <a className="fallback-button" href="/scoring">
+              <a
+                className="fallback-button"
+                href="/scoring"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
                 Open mobile scoring
               </a>
               <button

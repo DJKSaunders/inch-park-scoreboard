@@ -19,6 +19,7 @@ test("defines the admin, scoring and paired display routes", async () => {
   assert.match(admin, /Choose the featured match/);
   assert.match(admin, /Display this match/);
   assert.match(admin, /Open fallback scorer/);
+  assert.match(admin, /href="\/scoring"[\s\S]*?target="_blank"/);
   assert.match(scoring, /runActions/);
   assert.match(scoring, /Wide \+1/);
   assert.match(scoring, /No ball \+1/);
