@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#000033">
+    <title>Inch Park Scorer</title>
+    <link rel="stylesheet" href="../assets/scoreboard.css">
+  </head>
+  <body data-view="scoring">
+    <main class="scorer-page">
+      <header class="scorer-header">
+        <span class="brand"><img src="../assets/club-logo.png" alt=""><span><strong>Fallback scorer</strong><small>Edinburgh South CC</small></span></span>
+        <span class="live-pill" id="innings">Not started</span>
+      </header>
+
+      <section class="score-summary" aria-live="polite">
+        <div class="total"><strong id="runs">0</strong><span>/</span><strong id="wickets">0</strong></div>
+        <div class="summary-overs"><span id="overs">0.0</span> overs</div>
+      </section>
+
+      <section class="controls">
+        <label class="manage">Manage score
+          <select id="manage">
+            <option value="">Scoreboard actions…</option>
+            <option value="override">Manual override</option>
+            <option value="innings">Start second innings</option>
+            <option value="reset">Reset score</option>
+          </select>
+        </label>
+
+        <div class="section-heading"><h1>Runs</h1><span>Keys: 0, 1, 2, 3, 4, 6</span></div>
+        <div class="run-grid">
+          <button data-score="0" data-legal="true">0</button>
+          <button data-score="1" data-legal="true">1</button>
+          <button data-score="2" data-legal="true">2</button>
+          <button data-score="3" data-legal="true">3</button>
+          <button data-score="4" data-legal="true">4</button>
+          <button data-score="6" data-legal="true">6</button>
+        </div>
+        <button class="wicket-button" id="wicket">Wicket <span>+ ball · key X</span></button>
+
+        <div class="section-heading extras-heading"><h2>Extras</h2><span>Keys: W, N, B, L, P</span></div>
+        <div class="extras-grid">
+          <button data-score="1" data-legal="false"><strong>WD</strong><span>+1</span></button>
+          <button data-score="1" data-legal="false"><strong>NB</strong><span>+1</span></button>
+          <button data-score="1" data-legal="true"><strong>B</strong><span>+1 &amp; ball</span></button>
+          <button data-score="1" data-legal="true"><strong>LB</strong><span>+1 &amp; ball</span></button>
+          <button data-score="5" data-legal="false"><strong>P5</strong><span>+5</span></button>
+        </div>
+        <button class="undo-button" id="undo">↶ Undo last action <span>Key U</span></button>
+        <p class="message" id="message" role="status"></p>
+      </section>
+    </main>
+
+    <dialog id="login-dialog" class="dialog" aria-labelledby="login-title">
+      <form method="dialog" id="login-form">
+        <p class="eyebrow">Scorer access</p>
+        <h2 id="login-title">Enter scoring password</h2>
+        <p>The score displays are public. This password protects score changes.</p>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Open scorer</button>
+        <p class="dialog-message" id="login-message"></p>
+      </form>
+    </dialog>
+
+    <dialog id="action-dialog" class="dialog">
+      <form method="dialog" id="action-form">
+        <button class="close" value="cancel" aria-label="Close">×</button>
+        <div id="action-content"></div>
+      </form>
+    </dialog>
+
+    <script src="../config.js"></script>
+    <script src="../assets/scoreboard.js"></script>
+  </body>
+</html>

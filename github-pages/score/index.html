@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#010106">
+    <title>Inch Park Scoreboard</title>
+    <link rel="stylesheet" href="../assets/scoreboard.css">
+  </head>
+  <body class="display-body" data-view="score">
+    <main class="display-page" aria-live="polite">
+      <div class="score-diagonal pixel-shift" id="score">
+        <span class="score-runs" id="runs">0</span>
+        <span class="score-wickets" id="wickets">0</span>
+      </div>
+      <span class="connection-warning" id="connection-warning">Connection lost</span>
+    </main>
+    <script src="../config.js"></script>
+    <script src="../assets/scoreboard.js"></script>
+  </body>
+</html>

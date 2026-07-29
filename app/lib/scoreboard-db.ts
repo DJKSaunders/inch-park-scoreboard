@@ -121,6 +121,25 @@ export async function getScoreboardState() {
   return fromRow(row);
 }
 
+export async function startManualScoreboard() {
+  await initialise();
+  const updatedAt = new Date().toISOString();
+  await getD1().batch([
+    getD1()
+      .prepare(
+        `UPDATE scoreboard_state SET
+          match_id = 'manual', home_team = NULL, away_team = NULL, venue = NULL,
+          start_time = NULL, match_status = 'LIVE', runs = 0, wickets = 0,
+          completed_overs = 0, balls = 0, innings = 1, updated_at = ?
+        WHERE id = 1`,
+      )
+      .bind(updatedAt),
+    getD1()
+      .prepare("UPDATE scoreboard_undo SET available = 0 WHERE id = 1"),
+  ]);
+  return getScoreboardState();
+}
+
 export async function selectMatch(matchId: string) {
   const match = matches.find((candidate) => candidate.id === matchId);
   if (!match) throw new Error("Unknown match.");
