@@ -21,8 +21,10 @@ if ! flock -n 9; then
   exit 0
 fi
 
-SCORE_URL="${BASE_URL%/}${SCORE_PATH}"
+START_PATH="${START_PATH:-/loading/}"
+START_URL="${BASE_URL%/}${START_PATH}"
 OVERS_URL="${BASE_URL%/}${OVERS_PATH}"
+STATE_URL="${BASE_URL%/}/api/state"
 
 mkdir -p \
   "$HOME/.config/chromium-inch-park-score" \
@@ -50,6 +52,16 @@ if grep -q '^HDMI-A-2 ' <<<"$OUTPUTS"; then
   wlr-randr --output HDMI-A-2 --on --mode 1920x1080 --pos 1920,0 2>/dev/null || true
 fi
 
+# Do not expose Chromium's connection-error page while the local service starts.
+attempt=0
+until /usr/bin/curl --fail --silent --max-time 2 "$STATE_URL" >/dev/null 2>&1; do
+  ((attempt += 1))
+  if ((attempt % 10 == 0)); then
+    echo "Waiting for the local scoreboard service ($attempt seconds)…"
+  fi
+  sleep 1
+done
+
 COMMON_FLAGS=(
   --app-auto-launched
   --disable-component-update
@@ -70,14 +82,14 @@ if $HAS_HDMI_1; then
     "${COMMON_FLAGS[@]}" \
     --class=inch-park-score \
     --user-data-dir="$HOME/.config/chromium-inch-park-score" \
-    --app="$SCORE_URL" &
+    --app="$START_URL" &
 elif $HAS_HDMI_2; then
   # A single screen connected to the second socket still displays the main score.
   /usr/bin/lwrespawn /usr/bin/chromium \
     "${COMMON_FLAGS[@]}" \
     --class=inch-park-score \
     --user-data-dir="$HOME/.config/chromium-inch-park-score" \
-    --app="$SCORE_URL" &
+    --app="$START_URL" &
 else
   echo "No HDMI display is connected; Chromium was not started."
   exit 0

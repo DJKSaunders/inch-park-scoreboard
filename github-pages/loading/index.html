@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#000033">
+    <title>Starting Inch Park Scoreboard</title>
+    <link rel="stylesheet" href="../assets/scoreboard.css">
+  </head>
+  <body class="startup-body">
+    <main class="startup-page" aria-live="polite">
+      <img
+        class="startup-logo"
+        src="../assets/club-logo.png"
+        alt="Edinburgh South Cricket Club"
+      >
+      <h1>Welcome to Inch Park</h1>
+      <div class="startup-progress" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <p>Starting scoreboard</p>
+    </main>
+    <script>
+      (() => {
+        "use strict";
+
+        const minimumDisplayTime = 3000;
+        const displayedAt = Date.now();
+
+        async function waitForScoreboard() {
+          try {
+            const response = await fetch("/api/state", { cache: "no-store" });
+            if (!response.ok) throw new Error("Scoreboard unavailable");
+            const remaining = Math.max(0, minimumDisplayTime - (Date.now() - displayedAt));
+            window.setTimeout(() => window.location.replace("/score/"), remaining);
+          } catch {
+            window.setTimeout(waitForScoreboard, 1000);
+          }
+        }
+
+        void waitForScoreboard();
+      })();
+    </script>
+  </body>
+</html>

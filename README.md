@@ -5,6 +5,7 @@ and paired 1920×1080 landscape LCD displays.
 
 ## Scoreboard screens
 
+- Branded startup screen: `/loading/`
 - Runs and wickets: `/score/`
 - Overs: `/overs/`
 - Scoreboard control: `/scoring/`
@@ -43,4 +44,6 @@ transition, and a complete manual override.
 
 The `pi/` directory contains the Raspberry Pi 4 kiosk installer, local scoring
 service, dual-HDMI launcher, status diagnostics, and installation
-instructions. The GitHub repository remains the source and update host.
+instructions. At startup, the main display shows the club-branded loading
+screen until the local scoring service is ready, then opens the live score.
+The GitHub repository remains the source and update host.

@@ -55,7 +55,7 @@ if [[ ! $BASE_URL =~ ^https?://[^[:space:]]+$ ]]; then
   exit 1
 fi
 
-for required_command in chromium labwc wlr-randr raspi-config; do
+for required_command in chromium curl labwc wlr-randr raspi-config; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     echo "Required command not found: $required_command" >&2
     exit 1
@@ -98,6 +98,7 @@ cp -R "$PROJECT_DIR/github-pages/." "$INSTALL_DIR/web/"
 
 {
   printf 'BASE_URL=%q\n' "$BASE_URL"
+  printf 'START_PATH=%q\n' "/loading/"
   printf 'SCORE_PATH=%q\n' "/score"
   printf 'OVERS_PATH=%q\n' "/overs"
 } >"$CONFIG_DIR/scoreboard.env"

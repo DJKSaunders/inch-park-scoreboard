@@ -9,11 +9,12 @@ async function source(path) {
 }
 
 test("defines the admin, scoring and paired display routes", async () => {
-  const [admin, scoring, score, overs] = await Promise.all([
+  const [admin, scoring, score, overs, loading] = await Promise.all([
     source("app/ui/AdminConsole.tsx"),
     source("app/ui/ScoringConsole.tsx"),
     source("app/score/page.tsx"),
     source("app/overs/page.tsx"),
+    source("app/loading/page.tsx"),
   ]);
 
   assert.match(admin, /Choose the featured match/);
@@ -31,6 +32,24 @@ test("defines the admin, scoring and paired display routes", async () => {
   assert.match(scoring, /role="dialog"/);
   assert.match(score, /ScoreDisplay/);
   assert.match(overs, /OversDisplay/);
+  assert.match(loading, /Welcome to Inch Park/);
+  assert.match(loading, /fetch\("\/api\/state"/);
+  assert.match(loading, /location\.replace\("\/score\/"/);
+});
+
+test("starts the Pi kiosk with a service-aware branded screen", async () => {
+  const [installer, launcher, loading] = await Promise.all([
+    source("pi/install.sh"),
+    source("pi/start-scoreboard.sh"),
+    source("github-pages/loading/index.html"),
+  ]);
+
+  assert.match(installer, /START_PATH=.*loading/);
+  assert.match(launcher, /curl --fail --silent --max-time 2/);
+  assert.match(launcher, /--app="\$START_URL"/);
+  assert.match(loading, /Welcome to Inch Park/);
+  assert.match(loading, /fetch\("\/api\/state"/);
+  assert.match(loading, /location\.replace\("\/score\/"/);
 });
 
 test("keeps the long-distance displays label-free and protected", async () => {

@@ -32,6 +32,7 @@ The installer:
 - enables desktop automatic login;
 - disables Raspberry Pi OS screen blanking;
 - installs a persistent local web and scoring service on port `8080`;
+- shows a club-branded loading screen until that service is ready;
 - installs a Labwc autostart entry;
 - uses Labwc rules to bind each Chromium window to a specific HDMI output;
 - restarts Chromium if it exits; and
@@ -56,6 +57,7 @@ Chromium processes, and recent kiosk launcher messages.
 The Pi serves the application and persists its score locally:
 
 - Main display: `http://127.0.0.1:8080/score/`
+- Branded startup: `http://127.0.0.1:8080/loading/`
 - Overs display: `http://127.0.0.1:8080/overs/`
 - Scoreboard control: `http://inch-park-scoreboard.local:8080/scoring/`
 
