@@ -113,7 +113,7 @@ a {
 
 .score-runs {
   display: block;
-  font-size: min(88vh, 42vw);
+  font-size: min(94vh, 49vw);
   left: 0.7vw;
   top: 0.5vh;
 }
