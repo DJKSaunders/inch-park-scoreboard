@@ -108,11 +108,11 @@ a {
 
 .score-runs,
 .score-wickets {
-  display: block;
   position: absolute;
 }
 
 .score-runs {
+  display: block;
   font-size: min(88vh, 42vw);
   left: 0.7vw;
   top: 0.5vh;
@@ -123,10 +123,19 @@ a {
 }
 
 .score-wickets {
+  align-items: baseline;
   bottom: 0.5vh;
   color: var(--green-bright);
+  display: flex;
   font-size: min(72vh, 34vw);
+  gap: 0.08em;
   right: 0.7vw;
+}
+
+.score-wickets small {
+  font-size: 0.22em;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .score-wickets.two-digit {

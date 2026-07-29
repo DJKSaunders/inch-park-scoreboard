@@ -46,6 +46,7 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(score, /score-diagonal pixel-shift/);
   assert.match(score, /score-runs/);
   assert.match(score, /score-wickets/);
+  assert.match(score, /<small>FOR<\/small>/);
   assert.doesNotMatch(overs, />OVERS</i);
   assert.match(css, /\.pixel-shift/);
   assert.match(css, /height:\s*100vh/);

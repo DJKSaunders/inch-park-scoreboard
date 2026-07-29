@@ -25,7 +25,8 @@ export function ScoreDisplay() {
         <span
           className={`score-wickets${state.wickets >= 10 ? " two-digit" : ""}`}
         >
-          {state.wickets}
+          <small>FOR</small>
+          <span>{state.wickets}</span>
         </span>
       </div>
     </main>
