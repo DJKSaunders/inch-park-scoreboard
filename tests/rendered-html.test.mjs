@@ -24,6 +24,11 @@ test("defines the admin, scoring and paired display routes", async () => {
   assert.match(scoring, /Wide \+1/);
   assert.match(scoring, /No ball \+1/);
   assert.match(scoring, /Undo last action/);
+  assert.match(scoring, /window\.addEventListener\("keydown"/);
+  assert.match(scoring, /Type RESET/);
+  assert.match(scoring, /Manual override/);
+  assert.match(scoring, /Start second innings/);
+  assert.match(scoring, /role="dialog"/);
   assert.match(score, /ScoreDisplay/);
   assert.match(overs, /OversDisplay/);
 });
@@ -45,18 +50,23 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(css, /font-kerning:\s*normal/);
 });
 
-test("declares durable scoreboard state and undo storage", async () => {
-  const [hosting, firstMigration, secondMigration, database] = await Promise.all([
-    source(".openai/hosting.json"),
-    source("drizzle/0000_lying_steel_serpent.sql"),
-    source("drizzle/0001_sparkling_ultragirl.sql"),
-    source("app/lib/scoreboard-db.ts"),
-  ]);
+test("declares durable scoreboard state, innings and undo storage", async () => {
+  const [hosting, firstMigration, secondMigration, inningsMigration, database] =
+    await Promise.all([
+      source(".openai/hosting.json"),
+      source("drizzle/0000_lying_steel_serpent.sql"),
+      source("drizzle/0001_sparkling_ultragirl.sql"),
+      source("drizzle/0002_tiresome_calypso.sql"),
+      source("app/lib/scoreboard-db.ts"),
+    ]);
 
   assert.match(hosting, /"d1": "DB"/);
   assert.match(firstMigration, /CREATE TABLE `scoreboard_state`/);
   assert.match(secondMigration, /CREATE TABLE `scoreboard_undo`/);
+  assert.match(inningsMigration, /ADD `innings` integer DEFAULT 1 NOT NULL/);
   assert.match(database, /scoreDelivery/);
   assert.match(database, /legalBall/);
   assert.match(database, /undoLastScore/);
+  assert.match(database, /startSecondInnings/);
+  assert.match(database, /resetScore/);
 });

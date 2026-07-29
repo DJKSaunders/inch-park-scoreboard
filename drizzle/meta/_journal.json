@@ -15,6 +15,13 @@
       "when": 1785355067121,
       "tag": "0001_sparkling_ultragirl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785356329335,
+      "tag": "0002_tiresome_calypso",
+      "breakpoints": true
     }
   ]
 }

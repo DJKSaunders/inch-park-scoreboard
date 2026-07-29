@@ -12,6 +12,7 @@ export const scoreboardState = sqliteTable("scoreboard_state", {
   wickets: integer("wickets").notNull().default(0),
   completedOvers: integer("completed_overs").notNull().default(0),
   balls: integer("balls").notNull().default(0),
+  innings: integer("innings").notNull().default(1),
   updatedAt: text("updated_at").notNull(),
 });
 

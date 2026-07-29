@@ -14,6 +14,7 @@ const createStateTable = `
     wickets INTEGER NOT NULL DEFAULT 0,
     completed_overs INTEGER NOT NULL DEFAULT 0,
     balls INTEGER NOT NULL DEFAULT 0,
+    innings INTEGER NOT NULL DEFAULT 1,
     updated_at TEXT NOT NULL
   )
 `;
@@ -40,6 +41,7 @@ type StateRow = {
   wickets: number;
   completed_overs: number;
   balls: number;
+  innings: number;
   updated_at: string;
 };
 
@@ -62,12 +64,23 @@ function getD1() {
 async function initialise() {
   const db = getD1();
   await db.prepare(createStateTable).run();
+  const stateColumns = await db
+    .prepare("PRAGMA table_info(scoreboard_state)")
+    .all<{ name: string }>();
+  if (!stateColumns.results.some((column) => column.name === "innings")) {
+    await db
+      .prepare(
+        "ALTER TABLE scoreboard_state ADD COLUMN innings INTEGER NOT NULL DEFAULT 1",
+      )
+      .run();
+  }
   await db.prepare(createUndoTable).run();
   await db
     .prepare(
       `INSERT INTO scoreboard_state (
-        id, match_status, runs, wickets, completed_overs, balls, updated_at
-      ) VALUES (1, 'IDLE', 0, 0, 0, 0, ?)
+        id, match_status, runs, wickets, completed_overs, balls, innings,
+        updated_at
+      ) VALUES (1, 'IDLE', 0, 0, 0, 0, 1, ?)
       ON CONFLICT(id) DO NOTHING`,
     )
     .bind(new Date().toISOString())
@@ -95,6 +108,7 @@ function fromRow(row: StateRow | null): ScoreboardState {
     wickets: row.wickets,
     completedOvers: row.completed_overs,
     balls: row.balls,
+    innings: row.innings,
     updatedAt: row.updated_at,
   };
 }
@@ -117,7 +131,7 @@ export async function selectMatch(matchId: string) {
       `UPDATE scoreboard_state SET
         match_id = ?, home_team = ?, away_team = ?, venue = ?, start_time = ?,
         match_status = ?, runs = ?, wickets = ?, completed_overs = ?, balls = ?,
-        updated_at = ?
+        innings = 1, updated_at = ?
       WHERE id = 1`,
     )
     .bind(
@@ -139,7 +153,10 @@ export async function selectMatch(matchId: string) {
 
 export async function updateScore(
   changes: Partial<
-    Pick<ScoreboardState, "runs" | "wickets" | "completedOvers" | "balls">
+    Pick<
+      ScoreboardState,
+      "runs" | "wickets" | "completedOvers" | "balls" | "innings"
+    >
   >,
 ) {
   const current = await getScoreboardState();
@@ -153,12 +170,14 @@ export async function updateScore(
       Math.min(999, changes.completedOvers ?? current.completedOvers),
     ),
     balls: Math.max(0, Math.min(5, changes.balls ?? current.balls)),
+    innings: Math.max(1, Math.min(2, changes.innings ?? current.innings)),
   };
 
   await getD1()
     .prepare(
       `UPDATE scoreboard_state SET
-        runs = ?, wickets = ?, completed_overs = ?, balls = ?, updated_at = ?
+        runs = ?, wickets = ?, completed_overs = ?, balls = ?, innings = ?,
+        updated_at = ?
       WHERE id = 1`,
     )
     .bind(
@@ -166,9 +185,45 @@ export async function updateScore(
       next.wickets,
       next.completedOvers,
       next.balls,
+      next.innings,
       new Date().toISOString(),
     )
     .run();
+  return getScoreboardState();
+}
+
+export async function resetScore() {
+  const current = await getScoreboardState();
+  if (!current.matchId) throw new Error("Select a match first.");
+  await getD1().batch([
+    getD1()
+      .prepare(
+        `UPDATE scoreboard_state SET
+          runs = 0, wickets = 0, completed_overs = 0, balls = 0, innings = 1,
+          updated_at = ? WHERE id = 1`,
+      )
+      .bind(new Date().toISOString()),
+    getD1()
+      .prepare("UPDATE scoreboard_undo SET available = 0 WHERE id = 1"),
+  ]);
+  return getScoreboardState();
+}
+
+export async function startSecondInnings() {
+  const current = await getScoreboardState();
+  if (!current.matchId) throw new Error("Select a match first.");
+  if (current.innings >= 2) throw new Error("The second innings is already active.");
+  await getD1().batch([
+    getD1()
+      .prepare(
+        `UPDATE scoreboard_state SET
+          runs = 0, wickets = 0, completed_overs = 0, balls = 0, innings = 2,
+          updated_at = ? WHERE id = 1`,
+      )
+      .bind(new Date().toISOString()),
+    getD1()
+      .prepare("UPDATE scoreboard_undo SET available = 0 WHERE id = 1"),
+  ]);
   return getScoreboardState();
 }
 
@@ -254,7 +309,7 @@ export async function clearScoreboard() {
       `UPDATE scoreboard_state SET
         match_id = NULL, home_team = NULL, away_team = NULL, venue = NULL,
         start_time = NULL, match_status = 'IDLE', runs = 0, wickets = 0,
-        completed_overs = 0, balls = 0, updated_at = ?
+        completed_overs = 0, balls = 0, innings = 1, updated_at = ?
       WHERE id = 1`,
     )
     .bind(new Date().toISOString())

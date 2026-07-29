@@ -1,0 +1,1 @@
+ALTER TABLE `scoreboard_state` ADD `innings` integer DEFAULT 1 NOT NULL;

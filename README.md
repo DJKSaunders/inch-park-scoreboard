@@ -29,3 +29,8 @@ state endpoint, so a temporary PlayHQ outage does not blank the screens.
 
 The fallback scorer advances the ball for normal runs, wickets, byes and
 leg-byes. Wides, no-balls and penalty runs do not advance the over.
+
+Keyboard shortcuts mirror the scoring buttons: `0`, `1`, `2`, `3`, `4`, `6`
+for legal deliveries; `W`, `N`, `B`, `L`, `P` for extras; `X` for a wicket;
+and `U` for undo. The actions menu provides a protected reset, second-innings
+transition, and a complete manual override.

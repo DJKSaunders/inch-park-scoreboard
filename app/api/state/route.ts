@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import {
   clearScoreboard,
   getScoreboardState,
+  resetScore,
   scoreDelivery,
   selectMatch,
+  startSecondInnings,
   undoLastScore,
   updateScore,
 } from "../../lib/scoreboard-db";
@@ -19,15 +21,24 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      action?: "select" | "update" | "score" | "undo" | "clear";
+      action?:
+        | "select"
+        | "update"
+        | "score"
+        | "undo"
+        | "reset"
+        | "next_innings"
+        | "clear";
       matchId?: string;
       runs?: number;
       wickets?: number;
       completedOvers?: number;
       balls?: number;
+      innings?: number;
       runsAdded?: number;
       wicketAdded?: boolean;
       legalBall?: boolean;
+      confirmation?: string;
     };
 
     if (body.action === "select" && body.matchId) {
@@ -41,6 +52,7 @@ export async function POST(request: Request) {
           wickets: body.wickets,
           completedOvers: body.completedOvers,
           balls: body.balls,
+          innings: body.innings,
         }),
       );
     }
@@ -61,6 +73,20 @@ export async function POST(request: Request) {
 
     if (body.action === "undo") {
       return NextResponse.json(await undoLastScore());
+    }
+
+    if (body.action === "reset") {
+      if (body.confirmation !== "RESET") {
+        return NextResponse.json(
+          { error: "Type RESET to confirm." },
+          { status: 400 },
+        );
+      }
+      return NextResponse.json(await resetScore());
+    }
+
+    if (body.action === "next_innings") {
+      return NextResponse.json(await startSecondInnings());
     }
 
     if (body.action === "clear") {

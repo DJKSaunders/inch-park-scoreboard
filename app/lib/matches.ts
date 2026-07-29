@@ -63,6 +63,7 @@ export type ScoreboardState = {
   wickets: number;
   completedOvers: number;
   balls: number;
+  innings: number;
   updatedAt: string;
 };
 
@@ -77,6 +78,7 @@ export const idleState: ScoreboardState = {
   wickets: 0,
   completedOvers: 0,
   balls: 0,
+  innings: 1,
   updatedAt: new Date(0).toISOString(),
 };
 
