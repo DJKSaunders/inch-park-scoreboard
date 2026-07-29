@@ -56,11 +56,13 @@ COMMON_FLAGS=(
   --disable-features=Translate,MediaRouter,OptimizationHints
   --disable-infobars
   --disable-session-crashed-bubble
+  --kiosk
   --no-default-browser-check
   --no-first-run
   --noerrdialogs
   --ozone-platform=x11
   --password-store=basic
+  --start-fullscreen
 )
 
 if $HAS_HDMI_1; then
