@@ -55,6 +55,7 @@ test("keeps the long-distance displays label-free and protected", async () => {
   assert.match(css, /\.display-page \*[\s\S]*cursor:\s*none/);
   assert.match(css, /\.score-runs[\s\S]*left:\s*0\.7vw/);
   assert.match(css, /\.score-wickets[\s\S]*font-size:\s*min\(72vh,\s*34vw\)/);
+  assert.match(css, /\.score-wickets[\s\S]*color:\s*var\(--green-bright\)/);
   assert.match(css, /\.score-wickets[\s\S]*right:\s*0\.7vw/);
 });
 

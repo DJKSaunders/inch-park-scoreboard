@@ -158,7 +158,8 @@ EOF
 sudo raspi-config nonint do_boot_behaviour B4
 sudo raspi-config nonint do_blanking 1
 systemctl --user daemon-reload
-systemctl --user enable --now inch-park-scoreboard.service
+systemctl --user enable inch-park-scoreboard.service
+systemctl --user restart inch-park-scoreboard.service
 
 echo
 echo "Inch Park Scoreboard kiosk configuration installed."

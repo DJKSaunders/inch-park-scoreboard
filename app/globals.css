@@ -124,6 +124,7 @@ a {
 
 .score-wickets {
   bottom: 0.5vh;
+  color: var(--green-bright);
   font-size: min(72vh, 34vw);
   right: 0.7vw;
 }
