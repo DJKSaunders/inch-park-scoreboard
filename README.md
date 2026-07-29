@@ -34,3 +34,10 @@ Keyboard shortcuts mirror the scoring buttons: `0`, `1`, `2`, `3`, `4`, `6`
 for legal deliveries; `W`, `N`, `B`, `L`, `P` for extras; `X` for a wicket;
 and `U` for undo. The actions menu provides a protected reset, second-innings
 transition, and a complete manual override.
+
+## Raspberry Pi kiosk
+
+The `pi/` directory contains the Raspberry Pi 4 kiosk installer, dual-HDMI
+launcher, status diagnostics, and installation instructions. The Pi remains a
+display client; the application and scoreboard state continue to run on the
+hosted service.
