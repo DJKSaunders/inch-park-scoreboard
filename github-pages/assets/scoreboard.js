@@ -1,24 +1,86 @@
 (() => {
   "use strict";
 
-  const api = `${window.SCOREBOARD_CONFIG.apiBase}/api/state`;
+  const config = window.SCOREBOARD_CONFIG;
+  const base = config.apiBase;
+  const linkTokenMode = config.authMode === "link-token";
+  const credentialKey = linkTokenMode ? "inch-park-control-token" : "inch-park-scorer-password";
+  const credentialHeader = linkTokenMode ? "x-scoreboard-token" : "x-scoreboard-password";
+  const api = `${base}/api/state`;
+  const snapshot = `${base}/state/current.json`;
   const view = document.body.dataset.view;
   const $ = (selector) => document.querySelector(selector);
   let state = {
-    matchId: null, runs: 0, wickets: 0, completedOvers: 0, balls: 0, innings: 1,
+    schemaVersion: 2,
+    revision: 0,
+    matchId: "manual",
+    runs: 0,
+    wickets: 0,
+    completedOvers: 0,
+    balls: 0,
+    innings: 1,
+    activeUntil: null,
+    sessionActive: false,
   };
   let busy = false;
+  let failures = 0;
+  let refreshTimer = null;
+
+  function captureLinkToken() {
+    if (!linkTokenMode || !window.location.hash.slice(1)) return;
+    try {
+      const token = decodeURIComponent(window.location.hash.slice(1));
+      sessionStorage.setItem(credentialKey, token);
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    } catch {}
+  }
+
+  async function sha256Hex(value) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function activeAt(value = state, at = Date.now()) {
+    const deadline = Date.parse(value.activeUntil || "");
+    return Number.isFinite(deadline) && deadline > at;
+  }
 
   function formatOvers(value = state) {
     return `${value.completedOvers}.${value.balls}`;
   }
 
-  function render(next) {
-    state = next;
-    if ($("#runs")) $("#runs").textContent = String(state.runs);
-    if ($("#wickets")) $("#wickets").textContent = String(state.wickets);
-    if ($("#overs")) $("#overs").textContent = formatOvers();
+  function setText(selector, value) {
+    const element = $(selector);
+    const text = String(value);
+    if (element && element.textContent !== text) element.textContent = text;
+  }
+
+  function renderSession() {
+    if (view !== "scoring") return;
+    const active = activeAt();
+    const sessionPanel = $("#session-panel");
+    const controls = $("#scoring-controls");
+    if (sessionPanel) sessionPanel.hidden = active;
+    controls?.querySelectorAll("button,select").forEach((element) => {
+      element.disabled = !active;
+    });
     if ($("#innings")) {
+      $("#innings").textContent = active ? `Innings ${state.innings}` : "Paused";
+      $("#innings").classList.toggle("is-live", active);
+    }
+  }
+
+  function render(next) {
+    state = {
+      ...state,
+      ...next,
+      revision: Number(next.revision ?? state.revision ?? 0),
+    };
+    state.sessionActive = activeAt(state);
+    setText("#runs", state.runs);
+    setText("#wickets", state.wickets);
+    setText("#overs", formatOvers());
+    if ($("#innings") && view !== "scoring") {
       $("#innings").textContent = state.matchId ? `Innings ${state.innings}` : "Not started";
       $("#innings").classList.toggle("is-live", Boolean(state.matchId));
     }
@@ -27,17 +89,38 @@
       $("#wicket-block").classList.toggle("two-digit", state.wickets >= 10);
       $("#score").classList.toggle("crowded", state.runs >= 200);
     }
+    renderSession();
     try { localStorage.setItem("inch-park-score", JSON.stringify(state)); } catch {}
+  }
+
+  function pollDelay() {
+    if (document.hidden && view !== "score" && view !== "overs") return 60000;
+    if (failures) return [15000, 30000, 60000][Math.min(failures - 1, 2)];
+    if (activeAt()) return view === "scoring" ? 1500 : 1000;
+    return 15000;
+  }
+
+  function scheduleRefresh(delay = pollDelay()) {
+    window.clearTimeout(refreshTimer);
+    refreshTimer = window.setTimeout(refresh, delay);
   }
 
   async function refresh() {
     try {
-      const response = await fetch(api, { cache: "no-store" });
+      const response = await fetch(view === "scoring" ? api : snapshot, {
+        cache: view === "scoring" ? "no-store" : "default",
+      });
       if (!response.ok) throw new Error("Score service unavailable");
       render(await response.json());
+      failures = 0;
       $("#connection-warning")?.classList.remove("visible");
     } catch {
+      failures += 1;
       $("#connection-warning")?.classList.add("visible");
+      if (view === "scoring") message("Connection lost. The displayed score has been preserved.", true);
+    } finally {
+      renderSession();
+      scheduleRefresh();
     }
   }
 
@@ -50,32 +133,42 @@
 
   async function post(body, success = "") {
     if (busy) return null;
-    const password = sessionStorage.getItem("inch-park-scorer-password");
-    if (!password) {
+    const credential = sessionStorage.getItem(credentialKey);
+    if (!credential) {
       $("#login-dialog").showModal();
       return null;
+    }
+    const requestBody = { ...body };
+    if (requestBody.action !== "authenticate" && requestBody.expectedRevision === undefined) {
+      requestBody.expectedRevision = state.revision;
     }
     busy = true;
     message("Updating scoreboard…");
     try {
+      const payload = JSON.stringify(requestBody);
+      const headers = {
+        "content-type": "application/json",
+        [credentialHeader]: credential,
+      };
+      if (linkTokenMode) headers["x-amz-content-sha256"] = await sha256Hex(payload);
       const response = await fetch(api, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-scoreboard-password": password,
-        },
-        body: JSON.stringify(body),
+        headers,
+        body: payload,
       });
       const result = await response.json();
       if (!response.ok) {
+        if (result.state) render(result.state);
         if (response.status === 401) {
-          sessionStorage.removeItem("inch-park-scorer-password");
+          sessionStorage.removeItem(credentialKey);
           $("#login-dialog").showModal();
         }
         throw new Error(result.error || "Update failed.");
       }
       render(result);
+      failures = 0;
       message(success);
+      scheduleRefresh();
       return result;
     } catch (error) {
       message(error.message || "Update failed.", true);
@@ -86,6 +179,11 @@
   }
 
   async function score(runsAdded, legalBall, wicketAdded = false) {
+    if (!activeAt()) {
+      renderSession();
+      message("Restart the scoring session to continue.", true);
+      return;
+    }
     await post({ action: "score", runsAdded, legalBall, wicketAdded }, wicketAdded ? "Wicket" : "Score updated");
   }
 
@@ -151,20 +249,28 @@
   }
 
   function initialiseScorer() {
+    if (linkTokenMode) {
+      $("#login-title").textContent = "Private control link required";
+      $("#login-dialog p:not(.eyebrow)").textContent = "Open the private link supplied by the scoreboard administrator, or paste its access key below.";
+      $("#login-dialog label").firstChild.textContent = "Access key";
+      $("#login-form button.primary").textContent = "Open scoreboard control";
+    }
     $("#login-form").addEventListener("submit", async (event) => {
       event.preventDefault();
-      const password = $("#password").value;
-      sessionStorage.setItem("inch-park-scorer-password", password);
+      const credential = $("#password").value;
+      sessionStorage.setItem(credentialKey, credential);
       const authenticated = await post({ action: "authenticate" });
       if (!authenticated) {
         $("#login-message").textContent = "Incorrect password.";
         return;
       }
-      if (!authenticated.matchId) await post({ action: "start" }, "Scoreboard ready");
       $("#login-message").textContent = "";
       $("#login-dialog").close();
+      renderSession();
     });
 
+    $("#restart-session").addEventListener("click", () => post({ action: "start_session" }, "Scoring session restarted"));
+    $("#end-session").addEventListener("click", () => post({ action: "end_session" }, "Scoring session ended"));
     document.querySelectorAll("[data-score]").forEach((button) => {
       button.addEventListener("click", () => score(Number(button.dataset.score), button.dataset.legal === "true"));
     });
@@ -175,7 +281,7 @@
       event.target.value = "";
     });
     window.addEventListener("keydown", (event) => {
-      if (event.target.matches("input,select,textarea") || event.repeat || $("dialog[open]")) return;
+      if (!activeAt() || event.target.matches("input,select,textarea") || event.repeat || $("dialog[open]")) return;
       const runs = ["0", "1", "2", "3", "4", "6"];
       if (runs.includes(event.key)) return void score(Number(event.key), true);
       const actions = {
@@ -187,14 +293,18 @@
       if (event.key.toLowerCase() === "u") void post({ action: "undo" }, "Last action undone");
     });
 
-    if (!sessionStorage.getItem("inch-park-scorer-password")) $("#login-dialog").showModal();
+    if (!sessionStorage.getItem(credentialKey)) $("#login-dialog").showModal();
   }
 
+  captureLinkToken();
   try {
     const cached = JSON.parse(localStorage.getItem("inch-park-score"));
     if (cached) render(cached);
   } catch {}
-  void refresh();
-  window.setInterval(refresh, view === "scoring" ? 1500 : 1000);
+
   if (view === "scoring") initialiseScorer();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) scheduleRefresh(0);
+  });
+  void refresh();
 })();

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LAN-only scoreboard web and API server for the Raspberry Pi."""
+"""LAN-only scoreboard web and revision-safe API server for the Raspberry Pi."""
 
 from __future__ import annotations
 
@@ -8,50 +8,47 @@ import json
 import mimetypes
 import os
 import threading
-from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from scoreboard_core.scoring import (
+    ConflictError,
+    ScoreboardError,
+    SessionInactiveError,
+    accept_remote_state,
+    apply_action,
+    initial_state,
+    normalize_state,
+    public_state,
+)
+
 WEB_ROOT = Path(os.environ.get("SCOREBOARD_WEB_ROOT", "./web")).resolve()
 STATE_FILE = Path(os.environ.get("SCOREBOARD_STATE", "./state.json")).resolve()
+STATE_ROOT = Path(os.environ.get("SCOREBOARD_STATE_ROOT", STATE_FILE.parent / "state")).resolve()
+CURRENT_FILE = STATE_ROOT / "current.json"
+REVISION_DIR = STATE_ROOT / "revisions"
 PASSWORD = os.environ.get("SCORER_PASSWORD", "")
+SYNC_TOKEN = os.environ.get("SCOREBOARD_SYNC_TOKEN", "")
 PORT = int(os.environ.get("SCOREBOARD_PORT", "8080"))
 STATE_LOCK = threading.Lock()
 
 
-def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def initial_state() -> dict:
-    return {
-        "matchId": "manual",
-        "homeTeam": None,
-        "awayTeam": None,
-        "venue": None,
-        "startTime": None,
-        "matchStatus": "LIVE",
-        "runs": 0,
-        "wickets": 0,
-        "completedOvers": 0,
-        "balls": 0,
-        "innings": 1,
-        "updatedAt": now(),
-        "_undo": None,
-    }
-
-
-def public_state(state: dict) -> dict:
-    return {key: value for key, value in state.items() if not key.startswith("_")}
+def write_json_atomic(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(f"{path.suffix}.tmp")
+    temporary.write_text(json.dumps(value, separators=(",", ":")))
+    temporary.replace(path)
 
 
 def save_state(state: dict) -> None:
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    temporary = STATE_FILE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(state, separators=(",", ":")))
-    temporary.replace(STATE_FILE)
+    write_json_atomic(STATE_FILE, state)
+    snapshot = public_state(state)
+    revision_file = REVISION_DIR / f"{state['revision']:010d}.json"
+    if not revision_file.exists():
+        write_json_atomic(revision_file, snapshot)
+    write_json_atomic(CURRENT_FILE, snapshot)
 
 
 def load_state() -> dict:
@@ -60,86 +57,60 @@ def load_state() -> dict:
         save_state(state)
         return state
     try:
-        return {**initial_state(), **json.loads(STATE_FILE.read_text())}
-    except (OSError, json.JSONDecodeError):
+        return normalize_state(json.loads(STATE_FILE.read_text()))
+    except (OSError, ValueError, json.JSONDecodeError):
         return initial_state()
-
-
-def bounded(value, minimum: int, maximum: int) -> int:
-    return max(minimum, min(maximum, int(value)))
-
-
-def apply_action(state: dict, body: dict) -> dict:
-    action = body.get("action")
-    if action == "authenticate":
-        return state
-    if action == "start":
-        return initial_state()
-    if action == "score":
-        runs_added = int(body.get("runsAdded", -1))
-        if runs_added < 0 or runs_added > 6:
-            raise ValueError("Invalid run value.")
-        state["_undo"] = {
-            key: state[key]
-            for key in ("runs", "wickets", "completedOvers", "balls")
-        }
-        state["runs"] = bounded(state["runs"] + runs_added, 0, 9999)
-        if body.get("wicketAdded"):
-            state["wickets"] = bounded(state["wickets"] + 1, 0, 10)
-        if body.get("legalBall"):
-            state["balls"] += 1
-            if state["balls"] == 6:
-                state["completedOvers"] += 1
-                state["balls"] = 0
-    elif action == "undo":
-        if not state.get("_undo"):
-            raise ValueError("There is no scoring action to undo.")
-        state.update(state["_undo"])
-        state["_undo"] = None
-    elif action == "reset":
-        if body.get("confirmation") != "RESET":
-            raise ValueError("Type RESET to confirm.")
-        state.update(runs=0, wickets=0, completedOvers=0, balls=0, innings=1, _undo=None)
-    elif action == "next_innings":
-        if state["innings"] >= 2:
-            raise ValueError("The second innings is already active.")
-        state.update(runs=0, wickets=0, completedOvers=0, balls=0, innings=2, _undo=None)
-    elif action == "update":
-        state.update(
-            runs=bounded(body.get("runs", state["runs"]), 0, 9999),
-            wickets=bounded(body.get("wickets", state["wickets"]), 0, 10),
-            completedOvers=bounded(body.get("completedOvers", state["completedOvers"]), 0, 999),
-            balls=bounded(body.get("balls", state["balls"]), 0, 5),
-            innings=bounded(body.get("innings", state["innings"]), 1, 2),
-            _undo=None,
-        )
-    else:
-        raise ValueError("Invalid action.")
-    state["updatedAt"] = now()
-    return state
 
 
 class ScoreboardHandler(SimpleHTTPRequestHandler):
     server_version = "InchParkScoreboard/1.0"
 
-    def send_json(self, value: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
+    def send_json(
+        self,
+        value: dict,
+        status: HTTPStatus = HTTPStatus.OK,
+        cache_control: str = "no-store",
+        etag: str | None = None,
+    ) -> None:
+        if etag and self.headers.get("if-none-match") == etag:
+            self.send_response(HTTPStatus.NOT_MODIFIED)
+            self.send_header("Cache-Control", cache_control)
+            self.send_header("ETag", etag)
+            self.end_headers()
+            return
         payload = json.dumps(value, separators=(",", ":")).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache_control)
+        if etag:
+            self.send_header("ETag", etag)
         self.end_headers()
         self.wfile.write(payload)
 
     def do_GET(self) -> None:
-        if urlparse(self.path).path == "/api/state":
+        path = urlparse(self.path).path
+        if path == "/api/state":
             with STATE_LOCK:
                 self.send_json(public_state(load_state()))
+            return
+        if path == "/state/current.json":
+            with STATE_LOCK:
+                state = public_state(load_state())
+                self.send_json(
+                    state,
+                    cache_control="public, max-age=0, s-maxage=2, stale-while-revalidate=1, stale-if-error=86400",
+                    etag=f'"score-{state["revision"]}"',
+                )
             return
         super().do_GET()
 
     def do_POST(self) -> None:
-        if urlparse(self.path).path != "/api/state":
+        path = urlparse(self.path).path
+        if path == "/api/remote-state":
+            self.receive_remote_state()
+            return
+        if path != "/api/state":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         supplied = self.headers.get("x-scoreboard-password", "")
@@ -147,13 +118,48 @@ class ScoreboardHandler(SimpleHTTPRequestHandler):
             self.send_json({"error": "Incorrect scoring password."}, HTTPStatus.UNAUTHORIZED)
             return
         try:
-            length = bounded(self.headers.get("content-length", 0), 0, 65536)
+            length = max(0, min(65536, int(self.headers.get("content-length", 0))))
             body = json.loads(self.rfile.read(length))
             with STATE_LOCK:
                 state = apply_action(load_state(), body)
-                save_state(state)
+                if body.get("action") != "authenticate":
+                    save_state(state)
                 self.send_json(public_state(state))
-        except (ValueError, TypeError, json.JSONDecodeError) as error:
+        except ConflictError as error:
+            with STATE_LOCK:
+                latest = public_state(load_state())
+            self.send_json(
+                {"error": str(error), "code": "REVISION_CONFLICT", "state": latest},
+                HTTPStatus.CONFLICT,
+            )
+        except SessionInactiveError as error:
+            with STATE_LOCK:
+                latest = public_state(load_state())
+            self.send_json(
+                {"error": str(error), "code": "SESSION_INACTIVE", "state": latest},
+                HTTPStatus.LOCKED,
+            )
+        except (ScoreboardError, TypeError, ValueError, json.JSONDecodeError) as error:
+            self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
+
+    def receive_remote_state(self) -> None:
+        supplied = self.headers.get("x-scoreboard-sync-token", "")
+        if self.client_address[0] not in {"127.0.0.1", "::1"}:
+            self.send_json({"error": "Remote state is accepted only from this device."}, HTTPStatus.FORBIDDEN)
+            return
+        if not SYNC_TOKEN or not hmac.compare_digest(supplied, SYNC_TOKEN):
+            self.send_json({"error": "Invalid local synchronisation token."}, HTTPStatus.UNAUTHORIZED)
+            return
+        try:
+            length = max(0, min(65536, int(self.headers.get("content-length", 0))))
+            incoming = json.loads(self.rfile.read(length))
+            with STATE_LOCK:
+                state = accept_remote_state(load_state(), incoming)
+                save_state(state)
+            self.send_json(public_state(state))
+        except ConflictError as error:
+            self.send_json({"error": str(error), "code": "STALE_REMOTE_STATE"}, HTTPStatus.CONFLICT)
+        except (ScoreboardError, TypeError, ValueError, json.JSONDecodeError) as error:
             self.send_json({"error": str(error)}, HTTPStatus.BAD_REQUEST)
 
     def translate_path(self, path: str) -> str:

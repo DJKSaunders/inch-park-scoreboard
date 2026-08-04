@@ -5,6 +5,7 @@ set -euo pipefail
 DEFAULT_BASE_URL="http://127.0.0.1:8080"
 BASE_URL="$DEFAULT_BASE_URL"
 SCORER_PASSWORD=""
+SYNC_TOKEN=""
 
 usage() {
   cat <<'EOF'
@@ -55,7 +56,7 @@ if [[ ! $BASE_URL =~ ^https?://[^[:space:]]+$ ]]; then
   exit 1
 fi
 
-for required_command in chromium curl labwc wlr-randr raspi-config; do
+for required_command in chromium curl labwc openssl wlr-randr raspi-config; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     echo "Required command not found: $required_command" >&2
     exit 1
@@ -72,8 +73,14 @@ SYSTEMD_DIR="$HOME/.config/systemd/user"
 BACKUP_DIR="$CONFIG_DIR/backups/$(date +%Y%m%d-%H%M%S)"
 SYSTEM_LABWC_AUTOSTART="/etc/xdg/labwc/autostart"
 
+if [[ -r "$CONFIG_DIR/server.env" ]]; then
+  SYNC_TOKEN="$(sed -n 's/^SCOREBOARD_SYNC_TOKEN=//p' "$CONFIG_DIR/server.env")"
+fi
 if [[ -z $SCORER_PASSWORD && -r "$CONFIG_DIR/server.env" ]]; then
   SCORER_PASSWORD="$(sed -n 's/^SCORER_PASSWORD=//p' "$CONFIG_DIR/server.env")"
+fi
+if [[ -z $SYNC_TOKEN ]]; then
+  SYNC_TOKEN="$(openssl rand -hex 32)"
 fi
 if [[ -z $SCORER_PASSWORD ]]; then
   read -r -s -p "Scoring password: " SCORER_PASSWORD
@@ -101,6 +108,10 @@ done
 install -m 0755 "$SCRIPT_DIR/start-scoreboard.sh" "$INSTALL_DIR/start-scoreboard.sh"
 install -m 0755 "$SCRIPT_DIR/status.sh" "$INSTALL_DIR/status.sh"
 install -m 0755 "$SCRIPT_DIR/server.py" "$INSTALL_DIR/server.py"
+install -m 0755 "$SCRIPT_DIR/sync.py" "$INSTALL_DIR/sync.py"
+rm -rf "$INSTALL_DIR/scoreboard_core"
+cp -R "$SCRIPT_DIR/scoreboard_core" "$INSTALL_DIR/scoreboard_core"
+find "$INSTALL_DIR/scoreboard_core" -type f -exec chmod 0644 {} +
 install -m 0644 \
   "$SCRIPT_DIR/assets/scoreboard-wallpaper.png" \
   "$INSTALL_DIR/assets/scoreboard-wallpaper.png"
@@ -148,6 +159,7 @@ chmod 0600 "$CONFIG_DIR/scoreboard.env"
   printf 'SCOREBOARD_PORT=8080\n'
   printf 'SCOREBOARD_WEB_ROOT=%s\n' "$INSTALL_DIR/web"
   printf 'SCOREBOARD_STATE=%s\n' "$CONFIG_DIR/state.json"
+  printf 'SCOREBOARD_SYNC_TOKEN=%s\n' "$SYNC_TOKEN"
 } >"$CONFIG_DIR/server.env"
 chmod 0600 "$CONFIG_DIR/server.env"
 

@@ -55,6 +55,47 @@ test("starts the Pi kiosk with a service-aware branded screen", async () => {
   assert.match(loading, /location\.replace\("\/score\/"/);
 });
 
+test("protects local scoring with revisions, expiry and restart controls", async () => {
+  const [server, engine, controller, scoringPage] = await Promise.all([
+    source("pi/server.py"),
+    source("pi/scoreboard_core/scoring.py"),
+    source("github-pages/assets/scoreboard.js"),
+    source("github-pages/scoring/index.html"),
+  ]);
+
+  assert.match(engine, /DEFAULT_SESSION_SECONDS = 10 \* 60/);
+  assert.match(engine, /expectedRevision/);
+  assert.match(engine, /SessionInactiveError/);
+  assert.match(server, /\/state\/current\.json/);
+  assert.match(server, /stale-while-revalidate=1/);
+  assert.match(server, /REVISION_CONFLICT/);
+  assert.match(controller, /expectedRevision = state\.revision/);
+  assert.match(controller, /return 15000/);
+  assert.match(controller, /Restart the scoring session/);
+  assert.match(scoringPage, /id="restart-session"/);
+  assert.match(scoringPage, /id="end-session"/);
+});
+
+test("defines a private static AWS origin and IoT score delivery", async () => {
+  const [template, writer, sync, productionConfig] = await Promise.all([
+    source("cloud/scoreboard.yml"),
+    source("cloud/score_writer.py"),
+    source("pi/sync.py"),
+    source("cloud/config.production.js"),
+  ]);
+
+  assert.match(template, /AWS::CloudFront::Distribution/);
+  assert.match(template, /AWS::CloudFront::OriginAccessControl/);
+  assert.match(template, /AWS::IoT::Thing/);
+  assert.match(template, /ReservedConcurrentExecutions: 1/);
+  assert.match(template, /RetentionInDays: 3/);
+  assert.match(writer, /IfMatch/);
+  assert.match(writer, /retain=True/);
+  assert.match(sync, /x-amzn-mqtt-ca/);
+  assert.match(sync, /api\/remote-state/);
+  assert.match(productionConfig, /authMode: "link-token"/);
+});
+
 test("keeps the long-distance displays label-free and protected", async () => {
   const [score, overs, css] = await Promise.all([
     source("app/ui/ScoreDisplay.tsx"),

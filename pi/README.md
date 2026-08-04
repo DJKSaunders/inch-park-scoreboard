@@ -65,3 +65,15 @@ The Pi serves the application and persists its score locally:
 
 Scoreboard control is intended for devices on the same trusted club network.
 The shared password is stored only on the Pi with owner-only file permissions.
+
+## AWS IoT synchronisation
+
+`sync.py` is the optional production receiver for remotely submitted score
+updates. It makes an outbound certificate-authenticated MQTT connection and
+subscribes only to the scoreboard state topic. Incoming messages must contain a
+newer valid revision and are passed to a loopback-only local API protected by a
+separate generated token.
+
+The receiver is not enabled by the base installer. It should be configured only
+after the AWS stack and the Pi's IoT certificate have been created. Until then,
+the existing LAN controller and local scoreboard continue working normally.

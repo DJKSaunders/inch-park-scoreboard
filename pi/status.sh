@@ -20,6 +20,10 @@ echo "Local API:"
 curl -fsS http://127.0.0.1:8080/api/state 2>/dev/null ||
   echo "Local API is unavailable"
 echo
+echo "AWS IoT sync:"
+systemctl --user --no-pager --full status inch-park-scoreboard-sync.service 2>/dev/null |
+  sed -n '1,8p' || echo "AWS IoT sync is not configured"
+echo
 echo "Display connectors:"
 for connector_status in /sys/class/drm/card*-*/status; do
   connector_name="${connector_status%/status}"

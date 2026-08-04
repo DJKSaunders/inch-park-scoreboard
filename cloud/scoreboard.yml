@@ -1,0 +1,275 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Inch Park static cricket scoreboard, authenticated score writer and IoT delivery.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: inch-park-scoreboard
+    AllowedPattern: "[a-z0-9-]+"
+  LambdaArtifactBucket:
+    Type: String
+    Description: Existing private S3 bucket containing the Lambda deployment zip.
+  LambdaArtifactKey:
+    Type: String
+    Description: S3 object key for score-writer.zip.
+  ControlTokenHash:
+    Type: String
+    NoEcho: true
+    MinLength: 64
+    MaxLength: 64
+    AllowedPattern: "[a-fA-F0-9]{64}"
+
+Resources:
+  StateBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: RemoveOldScoreRevisions
+            Prefix: state/revisions/
+            Status: Enabled
+            ExpirationInDays: 365
+          - Id: RemoveIncompleteUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  StaticOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${ProjectName}-s3"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  LambdaOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${ProjectName}-lambda"
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  DirectoryIndexFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${ProjectName}-directory-index"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Resolve static route directories to their index documents.
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          if (request.uri.endsWith('/')) {
+            request.uri += 'index.html';
+          }
+          return request;
+        }
+
+  ScoreWriterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ScoreStateAndPublish
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub "${StateBucket.Arn}/state/*"
+              - Effect: Allow
+                Action: iot:Publish
+                Resource: !Sub "arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:topic/${ProjectName}/main/state"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ProjectName}-writer:*"
+
+  ScoreWriterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-writer"
+      Architectures:
+        - arm64
+      Runtime: python3.13
+      Handler: score_writer.lambda_handler
+      Role: !GetAtt ScoreWriterRole.Arn
+      MemorySize: 128
+      Timeout: 3
+      ReservedConcurrentExecutions: 1
+      Code:
+        S3Bucket: !Ref LambdaArtifactBucket
+        S3Key: !Ref LambdaArtifactKey
+      Environment:
+        Variables:
+          SCOREBOARD_BUCKET: !Ref StateBucket
+          SCOREBOARD_TOPIC: !Sub "${ProjectName}/main/state"
+          CONTROL_TOKEN_HASH: !Ref ControlTokenHash
+
+  ScoreWriterLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProjectName}-writer"
+      RetentionInDays: 3
+
+  ScoreWriterUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt ScoreWriterFunction.Arn
+      AuthType: AWS_IAM
+      InvokeMode: BUFFERED
+
+  AllowCloudFrontFunctionUrl:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ScoreWriterFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: cloudfront.amazonaws.com
+      FunctionUrlAuthType: AWS_IAM
+      SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/*"
+
+  AllowCloudFrontFunction:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ScoreWriterFunction
+      Action: lambda:InvokeFunction
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/*"
+
+  ScoreboardDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: Inch Park cricket scoreboard
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: StaticSite
+            DomainName: !GetAtt StateBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt StaticOriginAccessControl.Id
+            S3OriginConfig: {}
+          - Id: ScoreWriter
+            DomainName: !Select [2, !Split ["/", !GetAtt ScoreWriterUrl.FunctionUrl]]
+            OriginAccessControlId: !GetAtt LambdaOriginAccessControl.Id
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: StaticSite
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt DirectoryIndexFunction.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ScoreWriter
+            ViewerProtocolPolicy: https-only
+            Compress: true
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - PATCH
+              - POST
+              - DELETE
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: 413f2c2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2021
+
+  StateBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StateBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${StateBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ScoreboardDistribution}"
+
+  ScoreboardThing:
+    Type: AWS::IoT::Thing
+    Properties:
+      ThingName: !Sub "${ProjectName}-pi"
+
+  ScoreboardDevicePolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyName: !Sub "${ProjectName}-pi-read-state"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: iot:Connect
+            Resource: !Sub "arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:client/${ProjectName}-pi"
+          - Effect: Allow
+            Action: iot:Subscribe
+            Resource: !Sub "arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/${ProjectName}/main/state"
+          - Effect: Allow
+            Action: iot:Receive
+            Resource: !Sub "arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:topic/${ProjectName}/main/state"
+
+Outputs:
+  WebsiteUrl:
+    Value: !Sub "https://${ScoreboardDistribution.DomainName}"
+  DistributionId:
+    Value: !Ref ScoreboardDistribution
+  StateBucketName:
+    Value: !Ref StateBucket
+  ScoreWriterFunctionName:
+    Value: !Ref ScoreWriterFunction
+  IoTThingName:
+    Value: !Ref ScoreboardThing
+  IoTPolicyName:
+    Value: !Ref ScoreboardDevicePolicy
+  IoTTopic:
+    Value: !Sub "${ProjectName}/main/state"
