@@ -77,10 +77,11 @@ test("protects local scoring with revisions, expiry and restart controls", async
 });
 
 test("defines a private static AWS origin and IoT score delivery", async () => {
-  const [template, writer, sync, productionConfig] = await Promise.all([
+  const [template, writer, sync, configureSync, productionConfig] = await Promise.all([
     source("cloud/scoreboard.yml"),
     source("cloud/score_writer.py"),
     source("pi/sync.py"),
+    source("pi/configure-cloud-sync.sh"),
     source("cloud/config.production.js"),
   ]);
 
@@ -93,6 +94,8 @@ test("defines a private static AWS origin and IoT score delivery", async () => {
   assert.match(writer, /retain=True/);
   assert.match(sync, /x-amzn-mqtt-ca/);
   assert.match(sync, /api\/remote-state/);
+  assert.match(configureSync, /python3-paho-mqtt/);
+  assert.match(configureSync, /inch-park-scoreboard-sync\.service/);
   assert.match(productionConfig, /authMode: "link-token"/);
 });
 

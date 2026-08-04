@@ -54,7 +54,7 @@ The Lambda is capped at one concurrent 128 MB execution.
 After the stack is created:
 
 1. Associate the distribution with CloudFront's Free flat-rate plan if the AWS
-   account is eligible.
+   account is eligible, then enable its included WAF protections and rate limit.
 2. Upload `build/site/` without deleting the `state/` prefix.
 3. Create and activate one AWS IoT certificate for the Thing.
 4. Attach the stack-created IoT policy to that certificate.

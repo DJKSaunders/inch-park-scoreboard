@@ -109,6 +109,7 @@ install -m 0755 "$SCRIPT_DIR/start-scoreboard.sh" "$INSTALL_DIR/start-scoreboard
 install -m 0755 "$SCRIPT_DIR/status.sh" "$INSTALL_DIR/status.sh"
 install -m 0755 "$SCRIPT_DIR/server.py" "$INSTALL_DIR/server.py"
 install -m 0755 "$SCRIPT_DIR/sync.py" "$INSTALL_DIR/sync.py"
+install -m 0755 "$SCRIPT_DIR/configure-cloud-sync.sh" "$INSTALL_DIR/configure-cloud-sync.sh"
 rm -rf "$INSTALL_DIR/scoreboard_core"
 cp -R "$SCRIPT_DIR/scoreboard_core" "$INSTALL_DIR/scoreboard_core"
 find "$INSTALL_DIR/scoreboard_core" -type f -exec chmod 0644 {} +

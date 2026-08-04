@@ -77,3 +77,19 @@ separate generated token.
 The receiver is not enabled by the base installer. It should be configured only
 after the AWS stack and the Pi's IoT certificate have been created. Until then,
 the existing LAN controller and local scoreboard continue working normally.
+
+Once the AWS endpoint, topic and three downloaded certificate files are
+available, configure the receiver with:
+
+```bash
+~/.local/share/inch-park-scoreboard/configure-cloud-sync.sh \
+  --endpoint YOUR_ENDPOINT.iot.eu-west-2.amazonaws.com \
+  --topic inch-park-scoreboard/main/state \
+  --certificate /path/to/device-certificate.pem.crt \
+  --private-key /path/to/device-private.pem.key \
+  --root-ca /path/to/AmazonRootCA1.pem
+```
+
+This one-time operation installs the MQTT client, protects the certificate
+files and enables the receiver at boot. No AWS credentials are installed on the
+Pi; its certificate permits receiving only the scoreboard state topic.
