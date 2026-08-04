@@ -49,7 +49,11 @@ by `.gitignore` and must also remain outside the repository.
 
 `scoreboard.yml` creates the private state bucket, CloudFront distribution,
 write Lambda, three-day log retention, IoT Thing and least-privilege IoT policy.
-The Lambda is capped at one concurrent 128 MB execution.
+The Lambda uses 256 MB of memory and a ten-second timeout. The modest memory
+allocation provides enough CPU for boto3 startup while the bounded timeout,
+authenticated write endpoint and revision checks constrain the write workload
+without requiring reserved concurrency, which is unavailable on AWS accounts
+whose regional concurrency quota is the minimum value of 10.
 
 After the stack is created:
 

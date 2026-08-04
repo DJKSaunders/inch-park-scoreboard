@@ -5,7 +5,7 @@ import json
 import unittest
 from datetime import datetime, timezone
 
-from cloud.score_writer import process_request
+from cloud.score_writer import S3StateStore, process_request
 from pi.scoreboard_core.scoring import initial_state
 
 
@@ -37,6 +37,16 @@ class MemoryPublisher:
         self.values.append(state)
 
 
+class MissingStateError(Exception):
+    def __init__(self):
+        self.response = {"Error": {"Code": "NoSuchKey"}}
+
+
+class EmptyS3Client:
+    def get_object(self, **_kwargs):
+        raise MissingStateError()
+
+
 def event(method="GET", body=None, token=None):
     return {
         "requestContext": {"http": {"method": method}},
@@ -60,6 +70,12 @@ class ScoreWriterTest(unittest.TestCase):
         result = self.call(event())
         self.assertEqual(result["statusCode"], 200)
         self.assertEqual(self.store.commits, 0)
+
+    def test_missing_s3_state_starts_from_initial_score(self):
+        state, etag = S3StateStore(EmptyS3Client(), "scoreboard-state").load()
+        self.assertEqual(state["runs"], 0)
+        self.assertEqual(state["wickets"], 0)
+        self.assertIsNone(etag)
 
     def test_invalid_control_token_is_rejected_before_a_write(self):
         result = self.call(event("POST", {"action": "start_session", "expectedRevision": 0}, "wrong"))

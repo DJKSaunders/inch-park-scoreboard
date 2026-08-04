@@ -119,8 +119,11 @@ class S3StateStore:
     def load(self) -> tuple[dict[str, Any], str | None]:
         try:
             result = self.client.get_object(Bucket=self.bucket, Key="state/current.json")
-        except self.client.exceptions.ClientError as error:
-            code = str(error.response.get("Error", {}).get("Code", ""))
+        except Exception as error:
+            response_value = getattr(error, "response", None)
+            if not isinstance(response_value, dict):
+                raise
+            code = str(response_value.get("Error", {}).get("Code", ""))
             if code in {"NoSuchKey", "404"}:
                 return initial_state(), None
             raise
@@ -138,8 +141,9 @@ class S3StateStore:
                 CacheControl="public, max-age=31536000, immutable",
                 IfNoneMatch="*",
             )
-        except self.client.exceptions.ClientError as error:
-            if error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 412:
+        except Exception as error:
+            response_value = getattr(error, "response", None)
+            if isinstance(response_value, dict) and response_value.get("ResponseMetadata", {}).get("HTTPStatusCode") == 412:
                 raise ConflictError("The score changed on another device. Review the latest score and try again.") from error
             raise
         current_request = {
@@ -152,8 +156,9 @@ class S3StateStore:
         current_request["IfMatch" if previous_etag else "IfNoneMatch"] = previous_etag or "*"
         try:
             self.client.put_object(**current_request)
-        except self.client.exceptions.ClientError as error:
-            if error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 412:
+        except Exception as error:
+            response_value = getattr(error, "response", None)
+            if isinstance(response_value, dict) and response_value.get("ResponseMetadata", {}).get("HTTPStatusCode") == 412:
                 raise ConflictError("The score changed on another device. Review the latest score and try again.") from error
             raise
 

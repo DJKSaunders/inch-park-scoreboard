@@ -88,7 +88,14 @@ test("defines a private static AWS origin and IoT score delivery", async () => {
   assert.match(template, /AWS::CloudFront::Distribution/);
   assert.match(template, /AWS::CloudFront::OriginAccessControl/);
   assert.match(template, /AWS::IoT::Thing/);
-  assert.match(template, /ReservedConcurrentExecutions: 1/);
+  assert.match(template, /MemorySize: 256/);
+  assert.match(template, /Timeout: 10/);
+  assert.doesNotMatch(template, /ReservedConcurrentExecutions/);
+  assert.match(template, /Action: s3:ListBucket/);
+  assert.match(template, /Action: iot:Connect/);
+  assert.match(template, /client\/\*/);
+  assert.match(template, /iot:RetainPublish/);
+  assert.match(template, /CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad/);
   assert.match(template, /RetentionInDays: 3/);
   assert.match(writer, /IfMatch/);
   assert.match(writer, /retain=True/);

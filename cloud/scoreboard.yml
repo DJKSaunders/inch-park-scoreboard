@@ -96,13 +96,21 @@ Resources:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt StateBucket.Arn
+              - Effect: Allow
                 Action:
                   - s3:GetObject
                   - s3:PutObject
                 Resource: !Sub "${StateBucket.Arn}/state/*"
               - Effect: Allow
-                Action: iot:Publish
+                Action:
+                  - iot:Publish
+                  - iot:RetainPublish
                 Resource: !Sub "arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:topic/${ProjectName}/main/state"
+              - Effect: Allow
+                Action: iot:Connect
+                Resource: !Sub "arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:client/*"
               - Effect: Allow
                 Action:
                   - logs:CreateLogStream
@@ -118,9 +126,8 @@ Resources:
       Runtime: python3.13
       Handler: score_writer.lambda_handler
       Role: !GetAtt ScoreWriterRole.Arn
-      MemorySize: 128
-      Timeout: 3
-      ReservedConcurrentExecutions: 1
+      MemorySize: 256
+      Timeout: 10
       Code:
         S3Bucket: !Ref LambdaArtifactBucket
         S3Key: !Ref LambdaArtifactKey
@@ -213,7 +220,7 @@ Resources:
             CachedMethods:
               - GET
               - HEAD
-            CachePolicyId: 413f2c2d-6df8-44a3-9df3-4b5a84be39ad
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
             OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
