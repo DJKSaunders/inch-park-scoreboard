@@ -71,7 +71,9 @@ def main() -> None:
     client.tls_set_context(context)
 
     def on_connect(connected_client, _userdata, _flags, reason_code, _properties=None):
-        if int(reason_code) != 0:
+        # Paho 2.x supplies a ReasonCode object; older releases supply an int.
+        numeric_reason = getattr(reason_code, "value", reason_code)
+        if numeric_reason != 0:
             print(f"AWS IoT connection rejected: {reason_code}", file=sys.stderr, flush=True)
             return
         print("Connected to AWS IoT; waiting for scoreboard updates.", flush=True)
