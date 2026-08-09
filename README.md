@@ -40,12 +40,11 @@ for legal deliveries; `W`, `N`, `B`, `L`, `P` for extras; `X` for a wicket;
 and `U` for undo. The actions menu provides a protected reset, second-innings
 transition, and a complete manual override.
 
-## Raspberry Pi kiosk
+## Raspberry Pi desktop application
 
-The `pi/` directory contains the Raspberry Pi 4 kiosk installer, local scoring
-service, dual-HDMI launcher, status diagnostics, and installation
-instructions. At startup, the main display shows the club-branded loading
-screen until the local scoring service is ready, then opens the live score. The
-same graphic is installed as the underlying desktop wallpaper and the desktop
-panel is suppressed, avoiding an unbranded desktop flash between Linux startup
-and Chromium. The GitHub repository remains the source and update host.
+The `pi/` directory contains the Raspberry Pi 4 installer, local scoring
+service, dual-HDMI desktop launcher, status diagnostics, and installation
+instructions. The Pi boots to its normal desktop. Selecting `Inch Park
+Scoreboard` shows the club-branded loading screen until the local service is
+ready, then opens the live score. The same graphic remains available as the
+desktop wallpaper. The GitHub repository remains the source and update host.

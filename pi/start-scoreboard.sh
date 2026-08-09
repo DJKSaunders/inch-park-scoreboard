@@ -15,6 +15,10 @@ fi
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 
+mkdir -p "$CONFIG_DIR"
+exec >>"$CONFIG_DIR/kiosk.log" 2>&1
+echo "Starting scoreboard application at $(date --iso-8601=seconds)"
+
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   echo "The scoreboard launcher is already running."
@@ -63,7 +67,6 @@ until /usr/bin/curl --fail --silent --max-time 2 "$STATE_URL" >/dev/null 2>&1; d
 done
 
 COMMON_FLAGS=(
-  --app-auto-launched
   --disable-component-update
   --disable-features=Translate,MediaRouter,OptimizationHints
   --disable-infobars
@@ -77,19 +80,30 @@ COMMON_FLAGS=(
   --start-fullscreen
 )
 
+PIDS=()
+
+cleanup() {
+  for scoreboard_pid in "${PIDS[@]}"; do
+    kill "$scoreboard_pid" 2>/dev/null || true
+  done
+}
+trap cleanup EXIT INT TERM
+
 if $HAS_HDMI_1; then
-  /usr/bin/lwrespawn /usr/bin/chromium \
+  /usr/bin/chromium \
     "${COMMON_FLAGS[@]}" \
     --class=inch-park-score \
     --user-data-dir="$HOME/.config/chromium-inch-park-score" \
     --app="$START_URL" &
+  PIDS+=("$!")
 elif $HAS_HDMI_2; then
   # A single screen connected to the second socket still displays the main score.
-  /usr/bin/lwrespawn /usr/bin/chromium \
+  /usr/bin/chromium \
     "${COMMON_FLAGS[@]}" \
     --class=inch-park-score \
     --user-data-dir="$HOME/.config/chromium-inch-park-score" \
     --app="$START_URL" &
+  PIDS+=("$!")
 else
   echo "No HDMI display is connected; Chromium was not started."
   exit 0
@@ -97,11 +111,13 @@ fi
 
 if $HAS_HDMI_1 && $HAS_HDMI_2; then
   sleep 2
-  /usr/bin/lwrespawn /usr/bin/chromium \
+  /usr/bin/chromium \
     "${COMMON_FLAGS[@]}" \
     --class=inch-park-overs \
     --user-data-dir="$HOME/.config/chromium-inch-park-overs" \
     --app="$OVERS_URL" &
+  PIDS+=("$!")
 fi
 
-wait
+# Closing either display with Alt+F4 ends the application and closes the other.
+wait -n "${PIDS[@]}"

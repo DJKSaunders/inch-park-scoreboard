@@ -1,7 +1,9 @@
-# Raspberry Pi kiosk
+# Raspberry Pi desktop application
 
 This directory configures a Raspberry Pi 4 running Raspberry Pi OS 64-bit
-Desktop as the two-screen Inch Park Scoreboard client.
+Desktop with an on-demand two-screen Inch Park Scoreboard application. The Pi
+boots to its normal desktop; the scoreboard opens only when its desktop icon or
+application-menu entry is selected.
 
 ## Display assignment
 
@@ -32,16 +34,19 @@ The installer:
 - enables desktop automatic login;
 - disables Raspberry Pi OS screen blanking;
 - installs the Inch Park graphic as the desktop wallpaper;
-- suppresses the Raspberry Pi desktop panel during kiosk startup;
+- restores and retains the normal Raspberry Pi desktop panel;
+- installs an `Inch Park Scoreboard` desktop and application-menu launcher;
+- installs a `Close Inch Park Scoreboard` application-menu entry;
 - installs a persistent local web and scoring service on port `8080`;
 - shows a club-branded loading screen until that service is ready;
 - installs a Labwc autostart entry;
 - uses Labwc rules to bind each Chromium window to a specific HDMI output;
-- restarts Chromium if it exits; and
+- closes both scoreboard displays when either is closed; and
 - backs up existing user Labwc configuration.
 
-It does not reboot automatically. Connect the required HDMI screens before
-running `sudo reboot`.
+It does not reboot automatically. After reboot, select `Inch Park Scoreboard`
+from the desktop. Close it with Alt+F4 or the close entry in the application
+menu to return to the desktop.
 
 ## Check status
 

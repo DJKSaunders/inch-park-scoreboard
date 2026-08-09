@@ -11,7 +11,7 @@ usage() {
   cat <<'EOF'
 Usage: ./pi/install.sh [--base-url URL] [--password PASSWORD]
 
-Installs the Inch Park Scoreboard kiosk configuration for the current user.
+Installs the Inch Park Scoreboard desktop application for the current user.
 The installer does not reboot the Raspberry Pi.
 EOF
 }
@@ -70,6 +70,9 @@ CONFIG_DIR="$HOME/.config/inch-park-scoreboard"
 LABWC_DIR="$HOME/.config/labwc"
 PCMANFM_DIR="$HOME/.config/pcmanfm/default"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
+APPLICATIONS_DIR="$HOME/.local/share/applications"
+DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+DESKTOP_DIR="${DESKTOP_DIR:-$HOME/Desktop}"
 BACKUP_DIR="$CONFIG_DIR/backups/$(date +%Y%m%d-%H%M%S)"
 SYSTEM_LABWC_AUTOSTART="/etc/xdg/labwc/autostart"
 
@@ -97,6 +100,8 @@ mkdir -p \
   "$LABWC_DIR" \
   "$PCMANFM_DIR" \
   "$SYSTEMD_DIR" \
+  "$APPLICATIONS_DIR" \
+  "$DESKTOP_DIR" \
   "$BACKUP_DIR"
 
 for existing_file in "$LABWC_DIR/autostart" "$LABWC_DIR/rc.xml"; do
@@ -106,6 +111,7 @@ for existing_file in "$LABWC_DIR/autostart" "$LABWC_DIR/rc.xml"; do
 done
 
 install -m 0755 "$SCRIPT_DIR/start-scoreboard.sh" "$INSTALL_DIR/start-scoreboard.sh"
+install -m 0755 "$SCRIPT_DIR/stop-scoreboard.sh" "$INSTALL_DIR/stop-scoreboard.sh"
 install -m 0755 "$SCRIPT_DIR/status.sh" "$INSTALL_DIR/status.sh"
 install -m 0755 "$SCRIPT_DIR/server.py" "$INSTALL_DIR/server.py"
 install -m 0755 "$SCRIPT_DIR/sync.py" "$INSTALL_DIR/sync.py"
@@ -137,13 +143,12 @@ show_mounts=0
 EOF
 done
 
-# The Raspberry Pi panel would otherwise flash above the wallpaper before the
-# kiosk opens. Preserve the desktop process for the branded background, but
-# prevent the panel from being started by the system Labwc session.
-if grep -Fxq '/usr/bin/lwrespawn /usr/bin/wf-panel-pi &' "$SYSTEM_LABWC_AUTOSTART"; then
+# Earlier kiosk installs suppressed the Raspberry Pi panel. Restore it now that
+# the scoreboard is an on-demand desktop application.
+if grep -Fxq '# Disabled by Inch Park Scoreboard kiosk' "$SYSTEM_LABWC_AUTOSTART"; then
   cp -p "$SYSTEM_LABWC_AUTOSTART" "$BACKUP_DIR/system-labwc-autostart"
   sudo sed -i \
-    's|^/usr/bin/lwrespawn /usr/bin/wf-panel-pi &$|# Disabled by Inch Park Scoreboard kiosk|' \
+    's|^# Disabled by Inch Park Scoreboard kiosk$|/usr/bin/lwrespawn /usr/bin/wf-panel-pi \&|' \
     "$SYSTEM_LABWC_AUTOSTART"
 fi
 
@@ -182,9 +187,38 @@ EOF
 
 cat >"$LABWC_DIR/autostart" <<EOF
 #!/bin/sh
-"$INSTALL_DIR/start-scoreboard.sh" >>"$CONFIG_DIR/kiosk.log" 2>&1 &
+# The scoreboard is launched manually from the desktop or application menu.
 EOF
 chmod 0755 "$LABWC_DIR/autostart"
+
+cat >"$APPLICATIONS_DIR/inch-park-scoreboard.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Inch Park Scoreboard
+Comment=Open the cricket scoreboard on the connected displays
+Exec=$INSTALL_DIR/start-scoreboard.sh
+Icon=$INSTALL_DIR/web/assets/club-logo.png
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+EOF
+chmod 0644 "$APPLICATIONS_DIR/inch-park-scoreboard.desktop"
+install -m 0755 \
+  "$APPLICATIONS_DIR/inch-park-scoreboard.desktop" \
+  "$DESKTOP_DIR/Inch Park Scoreboard.desktop"
+
+cat >"$APPLICATIONS_DIR/inch-park-scoreboard-stop.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Close Inch Park Scoreboard
+Comment=Close the scoreboard and return to the Raspberry Pi desktop
+Exec=$INSTALL_DIR/stop-scoreboard.sh
+Icon=window-close
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+EOF
+chmod 0644 "$APPLICATIONS_DIR/inch-park-scoreboard-stop.desktop"
 
 cat >"$LABWC_DIR/rc.xml" <<'EOF'
 <?xml version="1.0"?>
@@ -215,14 +249,17 @@ systemctl --user enable inch-park-scoreboard.service
 systemctl --user restart inch-park-scoreboard.service
 
 echo
-echo "Inch Park Scoreboard kiosk configuration installed."
+echo "Inch Park Scoreboard desktop application installed."
 echo "Base URL: $BASE_URL"
 echo "Scoreboard control: http://$(hostname).local:8080/scoring/"
 echo "Existing Labwc files, when present, were backed up to:"
 echo "  $BACKUP_DIR"
 echo
-echo "Connect at least one HDMI screen, then reboot with:"
+echo "Reboot to return to the normal desktop without starting the scoreboard:"
 echo "  sudo reboot"
 echo
-echo "After reboot, inspect the kiosk with:"
+echo "Open 'Inch Park Scoreboard' from the desktop or application menu."
+echo "Close it with Alt+F4 or 'Close Inch Park Scoreboard' in the application menu."
+echo
+echo "Inspect the installation with:"
 echo "  $INSTALL_DIR/status.sh"
